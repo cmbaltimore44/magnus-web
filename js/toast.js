@@ -151,6 +151,11 @@ export function showActionToast(message, { actionLabel, onAction, type = 'succes
 }
 
 export function showError(err) {
+  if (err?.code === 'OFFLINE') {
+    // A write while offline (js/offline.js): expected, not an error.
+    showToast("You're offline — changes are disabled until you reconnect.", { type: 'info', duration: 4000 });
+    return;
+  }
   console.error(err);
   showToast(err?.message || 'Something went wrong talking to the server.', {
     type: 'error',

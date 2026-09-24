@@ -28,19 +28,26 @@ export function initLiveUpdates(refresh, canRefresh) {
   };
 
   let channel = null;
-  try {
-    channel = supabase
-      .channel('life-tracker-live')
-      .on('postgres_changes', { event: '*', schema: 'public' }, schedule)
-      .subscribe((status) => {
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          // Realtime isn't available (e.g. schema_003 not run yet): stop
-          // retrying and rely on refresh-on-focus.
-          supabase.removeChannel(channel);
-          channel = null;
-        }
-      });
-  } catch {
-    channel = null;
-  }
+  const subscribe = () => {
+    if (channel) return;
+    try {
+      const ch = supabase
+        .channel('life-tracker-live')
+        .on('postgres_changes', { event: '*', schema: 'public' }, schedule)
+        .subscribe((status) => {
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            // Realtime isn't available (e.g. schema_003 not run yet, or no
+            // network): stop retrying and rely on refresh-on-focus.
+            supabase.removeChannel(ch);
+            if (channel === ch) channel = null;
+          }
+        });
+      channel = ch;
+    } catch {
+      channel = null;
+    }
+  };
+  subscribe();
+  // Coming back online after the channel gave up: try once more.
+  window.addEventListener('online', subscribe);
 }

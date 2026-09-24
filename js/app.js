@@ -16,6 +16,7 @@ import { initVoiceInput } from './voiceInput.js';
 import { initQuickAdd } from './quickAddBar.js';
 import { onDataChanged, anyModalOpen } from './events.js';
 import { initLiveUpdates } from './live.js';
+import { setOfflineUser, isOffline, onOfflineChange, reportNetworkState, clearOfflineCache } from './offline.js';
 import { initFocus } from './focus.js';
 
 const authScreen = document.getElementById('auth-screen');
@@ -68,6 +69,7 @@ backBtn.addEventListener('click', () => {
 });
 
 document.getElementById('sign-out-btn').addEventListener('click', async () => {
+  clearOfflineCache();
   await signOut();
   location.reload();
 });
@@ -148,10 +150,26 @@ function wireLiveUpdates() {
   );
 }
 
+// Offline (js/offline.js): a banner while showing saved data; back online,
+// refresh what's on screen.
+function wireOffline() {
+  const banner = document.getElementById('offline-banner');
+  onOfflineChange((offline) => {
+    banner.hidden = !offline;
+    if (!offline) REFRESH[currentView()]?.();
+  });
+  window.addEventListener('offline', () => reportNetworkState(true));
+  window.addEventListener('online', () => reportNetworkState(false));
+  if (navigator.onLine === false) reportNetworkState(true);
+  banner.hidden = !isOffline();
+}
+
 // ---------- boot ----------
 
 async function enterApp(session) {
   const uid = currentUserId(session);
+  setOfflineUser(uid);
+  wireOffline();
   authScreen.hidden = true;
   appShell.hidden = false;
 

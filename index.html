@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="style.css" />
 <link rel="stylesheet" href="themes.css" />
 <script src="js/theme-boot.js"></script>
+<script src="js/sw-register.js" defer></script>
 <link rel="icon" type="image/png" href="icons/hearth-favicon.png" />
 <link rel="apple-touch-icon" href="icons/hearth-180.png" />
 <link rel="manifest" href="manifest.webmanifest" />
@@ -66,6 +67,7 @@
     </aside>
 
     <div class="content">
+      <div class="offline-banner" id="offline-banner" role="status" hidden>Offline — showing saved data, changes are disabled</div>
       <!-- Quick add (every view; on phones the floating + opens it) -->
       <form class="quickadd" id="quickadd-form" autocomplete="off">
         <div class="quickadd-row">
