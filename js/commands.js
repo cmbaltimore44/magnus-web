@@ -18,6 +18,7 @@ const VIEWS = [
   ['Projects', '#/projects'],
   ['Lists', '#/lists'],
   ['Library', '#/library'],
+  ['Want to Read', '#/library/want'],
   ['Quotes', '#/library/quotes'],
   ['Reading stats', '#/library/stats'],
   ['Log', '#/log'],

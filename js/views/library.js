@@ -1,7 +1,7 @@
 import * as booksApi from '../data/books.js';
 import * as quotesApi from '../data/quotes.js';
 import { hashSegments } from '../hash.js';
-import { showError, showToast, showConfirmToast } from '../toast.js';
+import { showError, showToast, showConfirmToast, showActionToast } from '../toast.js';
 import { stopVoiceInput } from '../voiceInput.js';
 import { deleteWithUndo } from '../undo.js';
 import { lookupBooks, normalizeIsbn } from '../openLibrary.js';
@@ -97,6 +97,7 @@ function cacheElements() {
     lookupBtn: document.getElementById('book-lookup-btn'),
     lookupResults: document.getElementById('book-lookup-results'),
     saveBookBtn: document.getElementById('save-book-btn'),
+    startBookBtn: document.getElementById('start-book-btn'),
     deleteBookBtn: document.getElementById('delete-book-btn'),
     addHighlightBtn: document.getElementById('add-highlight-btn'),
     highlightsList: document.getElementById('book-highlights-list'),
@@ -324,6 +325,11 @@ function renderWantRow(book, pos, total, filtering) {
     );
   }
 
+  const start = smallButton('btn btn-ghost lists-small-btn want-start', 'Start', `Start reading “${book.title}”`, () =>
+    startReading(book.id).catch(showError)
+  );
+  row.appendChild(start);
+
   if (!filtering) {
     const up = smallButton('routine-remove want-move want-up', '↑', `Move “${book.title}” up`, () => moveWant(book.id, -1));
     up.disabled = pos === 1;
@@ -453,6 +459,33 @@ async function deleteWantBook(book) {
   }
 }
 
+// "Start": status Reading, started today (local date), with an Undo that
+// puts back the previous status and started date. `fields` are other edits
+// to save along with it (the book editor's form).
+async function startReading(id, fields = {}) {
+  const book = books.find((b) => b.id === id) || (await booksApi.getBook(id));
+  const before = { status: book.status, started_date: book.started_date ?? null };
+  const updated = await booksApi.updateBook(id, { ...fields, status: 'reading', started_date: todayISO() });
+  upsertBook(updated);
+  renderBookLists();
+  if (currentBookId === id) showEditorStatus(updated);
+  showActionToast(`Started reading “${updated.title}”.`, {
+    actionLabel: 'Undo',
+    onAction: async () => {
+      try {
+        const restored = await booksApi.updateBook(id, before);
+        upsertBook(restored);
+        renderBookLists();
+        if (currentBookId === id) showEditorStatus(restored);
+        showToast('Restored.', { type: 'success', duration: 2500 });
+      } catch (err) {
+        showError(err);
+      }
+    },
+  });
+  return updated;
+}
+
 // The "?" badge: open the book and run the Open Library lookup, which then
 // only fills in what's missing.
 function openWithLookup(id) {
@@ -480,9 +513,8 @@ async function openBookDetail(id) {
   el.title.value = book.title;
   el.author.value = book.author || '';
   el.coverUrl.value = book.cover_image_url || '';
-  el.status.value = book.status;
   el.format.value = book.format;
-  el.started.value = book.started_date || '';
+  showEditorStatus(book);
   el.finished.value = book.finished_date || '';
   el.rating.value = book.rating != null ? String(book.rating) : '';
   el.isbn.value = book.isbn || '';
@@ -493,6 +525,13 @@ async function openBookDetail(id) {
     lookupOnOpen = null;
     handleLookup({ fillMissing: true });
   }
+}
+
+// Status + started date in the editor, and "Start reading" while it's Want to Read.
+function showEditorStatus(book) {
+  el.status.value = book.status;
+  el.started.value = book.started_date || '';
+  el.startBookBtn.hidden = book.status !== 'want_to_read';
 }
 
 // ---------- Open Library lookup ----------
@@ -591,9 +630,9 @@ function applyLookup(result) {
   showToast('Filled in from Open Library. Save to keep it.', { type: 'success', duration: 3000 });
 }
 
-async function handleSaveBook() {
+function editorFields() {
   const ratingValue = el.rating.value ? Number(el.rating.value) : null;
-  const fields = {
+  return {
     title: el.title.value.trim() || 'Untitled Book',
     author: el.author.value.trim() || null,
     cover_image_url: el.coverUrl.value.trim() || null,
@@ -605,6 +644,10 @@ async function handleSaveBook() {
     isbn: el.isbn.value.trim() || null,
     notes: el.notes.value.trim() || null,
   };
+}
+
+async function handleSaveBook() {
+  const fields = editorFields();
   try {
     const updated = await booksApi.updateBook(currentBookId, fields);
     const index = books.findIndex((b) => b.id === currentBookId);
@@ -947,6 +990,9 @@ export async function initLibrary(uid) {
 
   el.newBookBtn.addEventListener('click', handleNewBook);
   el.saveBookBtn.addEventListener('click', handleSaveBook);
+  el.startBookBtn.addEventListener('click', () => {
+    if (currentBookId) startReading(currentBookId, editorFields()).catch(showError);
+  });
   el.deleteBookBtn.addEventListener('click', handleDeleteBook);
   el.lookupBtn.addEventListener('click', () => handleLookup());
   el.wantAddForm.addEventListener('submit', handleWantAdd);

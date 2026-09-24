@@ -2519,6 +2519,7 @@ input, textarea, select, button {
   flex-shrink: 0;
 }
 .want-badge:hover { background: var(--hover-bg); }
+.want-start { flex-shrink: 0; }
 .want-move { font-size: 14px; padding: 2px 4px; }
 .want-move:disabled { visibility: hidden; }
 .want-move:hover { color: var(--text); }
@@ -2526,7 +2527,10 @@ input, textarea, select, button {
 @media (max-width: 720px) {
   .want-body { padding-bottom: 120px; } /* clear of the floating buttons */
   .want-row { padding: 4px 2px; gap: 4px; }
-  .want-row .routine-remove { min-width: 34px; min-height: 36px; }
+  .want-row .routine-remove { min-width: 30px; min-height: 36px; }
   .want-badge { width: 26px; height: 26px; margin: 0 4px; }
   .want-add-form input, .want-filter { font-size: 16px; } /* no iOS zoom-on-focus */
+  .want-start { min-height: 32px; padding: 4px 8px; }
 }
+
+.book-detail-actions { display: flex; gap: 8px; flex-wrap: wrap; }
