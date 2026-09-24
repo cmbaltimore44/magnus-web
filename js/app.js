@@ -7,14 +7,15 @@ import { initRoutines, refreshRoutines } from './views/routines.js';
 import { initProjects, refreshProjects } from './views/projects.js';
 import { initLibrary, refreshLibrary } from './views/library.js';
 import { initUpcoming, refreshUpcoming } from './views/upcoming.js';
-import { initLog, refreshLog } from './views/log.js';
+import { initLog, refreshLog, isLogDirty } from './views/log.js';
 import { initInsights, refreshInsights } from './views/insights.js';
 import { initSettings, refreshSettings } from './views/settings.js';
 import { getStartView } from './settings.js';
 import { initSearch } from './search.js';
 import { initVoiceInput } from './voiceInput.js';
 import { initQuickAdd } from './quickAddBar.js';
-import { onDataChanged } from './events.js';
+import { onDataChanged, anyModalOpen } from './events.js';
+import { initLiveUpdates } from './live.js';
 import { initFocus } from './focus.js';
 
 const authScreen = document.getElementById('auth-screen');
@@ -120,7 +121,7 @@ function initRouter() {
   setActiveView(currentView());
 }
 
-// ---------- cross-device sync (refetch on focus, not realtime) ----------
+// ---------- cross-device sync (refetch on focus, plus live updates) ----------
 
 function wireRefreshOnFocus() {
   const refresh = () => REFRESH[currentView()]?.();
@@ -136,6 +137,15 @@ function wireDataChanged() {
     const view = currentView();
     if (source !== view) REFRESH[view]?.();
   });
+}
+
+// Live updates (js/live.js) wait while a dialog is open or the Log has
+// unsaved edits, so a refresh never wipes what you're typing.
+function wireLiveUpdates() {
+  initLiveUpdates(
+    () => REFRESH[currentView()]?.(),
+    () => !anyModalOpen() && !isLogDirty()
+  );
 }
 
 // ---------- boot ----------
@@ -172,6 +182,7 @@ async function enterApp(session) {
   initFocus(uid);
   wireRefreshOnFocus();
   wireDataChanged();
+  wireLiveUpdates();
 }
 
 (async function boot() {
