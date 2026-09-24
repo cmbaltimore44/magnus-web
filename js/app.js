@@ -120,7 +120,7 @@ async function enterApp(session) {
   authScreen.hidden = true;
   appShell.hidden = false;
 
-  initTheme(document.getElementById('theme-toggle-btn'));
+  initTheme(document.getElementById('theme-toggle-btn'), document.getElementById('palette-select'));
   initRouter();
 
   try {

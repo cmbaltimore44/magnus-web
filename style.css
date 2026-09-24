@@ -8,8 +8,10 @@
   --text-muted: #93887a;
   --accent: #bf5433;
   --accent-hover: #a8452a;
+  --on-accent: #ffffff;
   --danger: #b83b2e;
   --danger-hover: #9c3025;
+  --on-danger: #ffffff;
   --overdue: #b83b2e;
   --soon: #b8791a;
   --success: #5c7a49;
@@ -36,8 +38,10 @@
   --text-muted: #998c7d;
   --accent: #e2703f;
   --accent-hover: #ec8455;
+  --on-accent: #ffffff;
   --danger: #d9584a;
   --danger-hover: #e26e60;
+  --on-danger: #ffffff;
   --overdue: #d9584a;
   --soon: #e0a83a;
   --success: #82a86a;
@@ -134,6 +138,22 @@ input, textarea, select, button {
   justify-content: center;
 }
 
+/* Color theme picker (themes.css); options come from js/palettes.js. */
+.palette-select {
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.palette-select:hover { background: var(--hover-bg); }
+.palette-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
 .content {
   flex: 1;
   display: flex;
@@ -225,7 +245,7 @@ input, textarea, select, button {
 
 .btn-primary {
   background: var(--accent);
-  color: white;
+  color: var(--on-accent);
 }
 .btn-primary:hover { background: var(--accent-hover); }
 
@@ -1448,7 +1468,7 @@ input, textarea, select, button {
     gap: 16px;
   }
 
-  .sidebar-footer .btn, .sidebar-footer .icon-toggle-btn {
+  .sidebar-footer .btn, .sidebar-footer .icon-toggle-btn, .sidebar-footer .palette-select {
     width: auto;
   }
 
@@ -1591,7 +1611,7 @@ input, textarea, select, button {
 .toast-confirm-danger {
   background: var(--danger);
   border-color: var(--danger);
-  color: white;
+  color: var(--on-danger);
 }
 .toast-confirm-danger:hover { background: var(--danger-hover); }
 

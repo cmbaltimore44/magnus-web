@@ -10,6 +10,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@600&family=Inter:wght@100..900&family=IBM+Plex+Mono:wght@500;600&display=swap" />
 <link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="themes.css" />
+<script src="js/theme-boot.js"></script>
 <link rel="icon" href="build/icon.png" />
 <link rel="apple-touch-icon" href="build/icon.png" />
 <link rel="manifest" href="manifest.webmanifest" />
@@ -52,7 +54,8 @@
         <button class="nav-item" data-view="library">Library</button>
       </nav>
       <div class="sidebar-footer">
-        <button id="theme-toggle-btn" class="icon-toggle-btn" title="Toggle dark mode">🌙</button>
+        <select id="palette-select" class="palette-select" title="Color theme" aria-label="Color theme"></select>
+        <button id="theme-toggle-btn" class="icon-toggle-btn" title="Light/dark mode">🌓</button>
         <button id="sign-out-btn" class="btn btn-ghost">Sign out</button>
       </div>
     </aside>

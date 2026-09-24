@@ -85,3 +85,12 @@ python3 scripts/generate-icon.py
 ```
 
 This writes `build/icon-source.png` (1024×1024 master), `build/icon.png` (512×512, used as the favicon/manifest icon), and `build/icon.icns` (macOS multi-resolution icon, built via the system `iconutil` if available).
+
+## Themes
+
+Color themes (Life Tracker, Heather, Lakeglow, Beacon) are shared with the
+Magnus terminal app. `themes.css` and `js/palettes.js` are **generated** in
+the Magnus repo (`npm run themes:web`); don't edit them by hand.
+`js/theme-boot.js` applies the saved theme and light/dark mode (Auto follows
+the system setting) before first paint. The picker and toggle live in the
+sidebar footer.
