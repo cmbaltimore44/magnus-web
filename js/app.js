@@ -8,6 +8,7 @@ import { initProjects, refreshProjects } from './views/projects.js';
 import { initLibrary, refreshLibrary } from './views/library.js';
 import { initUpcoming, refreshUpcoming } from './views/upcoming.js';
 import { initLog, refreshLog } from './views/log.js';
+import { initInsights, refreshInsights } from './views/insights.js';
 import { initSearch } from './search.js';
 import { initVoiceInput } from './voiceInput.js';
 import { initQuickAdd } from './quickAddBar.js';
@@ -70,10 +71,10 @@ document.getElementById('sign-out-btn').addEventListener('click', async () => {
 
 // ---------- routing ----------
 
-const VIEW_IDS = ['today', 'upcoming', 'board', 'routines', 'projects', 'library', 'log'];
+const VIEW_IDS = ['today', 'upcoming', 'board', 'routines', 'projects', 'library', 'log', 'insights'];
 
 // Views that only load their data when shown.
-const LAZY_VIEWS = ['upcoming', 'log'];
+const LAZY_VIEWS = ['upcoming', 'log', 'insights'];
 
 const REFRESH = {
   today: refreshToday,
@@ -83,6 +84,7 @@ const REFRESH = {
   projects: refreshProjects,
   library: refreshLibrary,
   log: refreshLog,
+  insights: refreshInsights,
 };
 
 function currentView() {
@@ -157,6 +159,7 @@ async function enterApp(session) {
     initLibrary(uid),
     initUpcoming(uid),
     initLog(uid),
+    initInsights(uid),
   ]);
   if (LAZY_VIEWS.includes(currentView())) REFRESH[currentView()]();
   initSearch();

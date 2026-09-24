@@ -2148,6 +2148,8 @@ input, textarea, select, button {
 }
 
 .column-chart-label {
+  height: 14px;
+  line-height: 14px;
   margin-top: 4px;
   font-family: var(--font-mono);
   font-size: 10px;

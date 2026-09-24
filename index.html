@@ -54,6 +54,7 @@
         <button class="nav-item" data-view="projects">Projects</button>
         <button class="nav-item" data-view="library">Library</button>
         <button class="nav-item" data-view="log">Log</button>
+        <button class="nav-item" data-view="insights">Insights</button>
       </nav>
       <div class="sidebar-footer">
         <select id="palette-select" class="palette-select" title="Color theme" aria-label="Color theme"></select>
@@ -484,6 +485,16 @@
             <div class="log-history-wrap"><table class="log-history" id="log-history"></table></div>
           </div>
         </div>
+      </section>
+
+      <!-- Insights view -->
+      <section class="view" id="view-insights" hidden>
+        <header class="topbar">
+          <div class="topbar-title">
+            <h1>Insights</h1>
+          </div>
+        </header>
+        <div class="detail-scroll stats-body" id="insights-body"></div>
       </section>
     </div>
   </div>
