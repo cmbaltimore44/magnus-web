@@ -85,6 +85,9 @@
             <h1>Today</h1>
             <span class="subtitle" id="today-date"></span>
           </div>
+          <div class="topbar-controls">
+            <button type="button" id="today-focus-btn" class="btn btn-ghost" title="Start a focus round without a task">Start focus</button>
+          </div>
         </header>
 
         <div class="today-grid">
@@ -609,10 +612,27 @@
             <span>Light / dark</span>
             <div class="scale segmented" id="settings-mode" role="group" aria-label="Light or dark"></div>
           </div>
-          <label class="field">
-            <span>Focus session length (minutes)</span>
-            <input type="number" id="settings-focus" min="1" max="180" step="1" inputmode="numeric" />
-          </label>
+          <fieldset class="field pomodoro-field">
+            <legend>Focus timer</legend>
+            <div class="pomodoro-grid">
+              <label class="field">
+                <span>Focus (min)</span>
+                <input type="number" id="settings-pomo-focus" min="1" max="180" step="1" inputmode="numeric" />
+              </label>
+              <label class="field">
+                <span>Break (min)</span>
+                <input type="number" id="settings-pomo-short" min="1" max="60" step="1" inputmode="numeric" />
+              </label>
+              <label class="field">
+                <span>Long break (min)</span>
+                <input type="number" id="settings-pomo-long" min="1" max="90" step="1" inputmode="numeric" />
+              </label>
+              <label class="field">
+                <span>Long break after N rounds</span>
+                <input type="number" id="settings-pomo-every" min="1" max="12" step="1" inputmode="numeric" />
+              </label>
+            </div>
+          </fieldset>
           <div class="field">
             <span>Weight unit (Log)</span>
             <div class="scale segmented" id="settings-weight-unit" role="group" aria-label="Weight unit"></div>
@@ -636,12 +656,20 @@
   </div>
 
   <!-- Focus timer (shown while one is running) -->
-  <div class="focus-pill" id="focus-pill" role="timer" aria-live="off" hidden>
-    <span class="focus-pill-label">Focus</span>
-    <span class="focus-pill-task" id="focus-pill-task"></span>
-    <span class="focus-pill-time" id="focus-pill-time"></span>
-    <button type="button" class="focus-pill-btn" id="focus-pause-btn">Pause</button>
-    <button type="button" class="focus-pill-btn" id="focus-stop-btn">Stop</button>
+  <div class="focus-pill" id="focus-pill" role="region" aria-label="Focus timer" hidden>
+    <button type="button" class="focus-pill-summary" id="focus-pill-summary" aria-expanded="false" aria-controls="focus-pill-actions">
+      <span class="focus-pill-label" id="focus-pill-label"></span>
+      <span class="focus-pill-time" id="focus-pill-time" role="timer"></span>
+      <span class="focus-pill-task" id="focus-pill-task"></span>
+    </button>
+    <div class="focus-pill-actions" id="focus-pill-actions">
+      <button type="button" class="focus-pill-btn focus-pill-next" id="focus-next-btn"></button>
+      <button type="button" class="focus-pill-btn" id="focus-pause-btn">Pause</button>
+      <button type="button" class="focus-pill-btn" id="focus-skip-btn">Skip</button>
+      <button type="button" class="focus-pill-btn" id="focus-extend-btn">+5</button>
+      <button type="button" class="focus-pill-btn" id="focus-stop-btn">Stop</button>
+    </div>
+    <span class="visually-hidden" id="focus-pill-status" aria-live="polite"></span>
   </div>
 
   <!-- Global search -->

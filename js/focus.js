@@ -1,54 +1,170 @@
 import * as focusApi from './data/focus.js';
-import { getFocusMinutes } from './settings.js';
+import * as pomo from './pomodoro.js';
+import { getPomodoroSettings } from './settings.js';
 import { showError, showToast } from './toast.js';
 import { notifyDataChanged } from './events.js';
 import { isMissingSchema, SCHEMA_003_HINT } from './schema.js';
 
-// Focus timer on a task: a countdown in a small bar that stays visible across
-// views. State lives in localStorage so it survives a reload; when it ends
-// (or is stopped after at least a minute) a focus_sessions row is saved.
+// Pomodoro focus timer: focus → break → … with a long break after every few
+// rounds (the rules are in js/pomodoro.js, shared with Magnus). A small pill
+// stays visible across views. When a phase's time is up it waits (chime +
+// notification) until you start the next phase or add 5 minutes. The timer
+// object lives in localStorage so it survives a reload; focus minutes are
+// saved to focus_sessions when you leave a focus phase (next, skip or stop).
 
-const STATE_KEY = 'kanban.focusTimer';
+const STATE_KEY = 'kanban.pomodoro';
+const OLD_STATE_KEY = 'kanban.focusTimer'; // pre-Pomodoro single countdown
+const NOTIFY_ASKED_KEY = 'kanban.notifyAsked';
+
+const PHONE = window.matchMedia('(max-width: 720px)');
 
 let userId = null;
-let state = null; // { taskId, taskTitle, startedAt, durationMs, elapsedMs, runningSince }
+let timer = null; // see js/pomodoro.js
 let ticker = null;
+let expanded = false; // phone: the pill opened up to show every button
+let audio = null;
 const baseTitle = document.title;
 const el = {};
+const listeners = new Set();
 
-function load() {
+// ---------- storage ----------
+
+function validTimer(t) {
+  return (
+    !!t &&
+    typeof t === 'object' &&
+    ['focus', 'short', 'long'].includes(t.phase) &&
+    ['running', 'ended'].includes(t.status) &&
+    Number.isFinite(t.startedAt) &&
+    Number.isFinite(t.minutes) &&
+    t.minutes > 0 &&
+    Number.isInteger(t.round) &&
+    t.round >= 0
+  );
+}
+
+// The old format: { taskId, taskTitle, startedAt (ISO), durationMs,
+// elapsedMs, runningSince }. Becomes a focus round with the same time left.
+function migrateOld(old, now) {
+  if (!old || !old.durationMs || !Number.isFinite(old.elapsedMs)) return null;
+  const elapsed = Math.max(0, old.elapsedMs + (old.runningSince ? now - old.runningSince : 0));
+  const start = Date.parse(old.startedAt);
+  const startedAt = Number.isFinite(start) && start <= now - elapsed ? start : now - elapsed;
+  return {
+    taskId: old.taskId ?? null,
+    title: old.taskTitle ?? null,
+    phase: 'focus',
+    round: 0,
+    startedAt,
+    minutes: old.durationMs / 60000,
+    pausedAt: old.runningSince ? null : now,
+    pausedMs: now - startedAt - elapsed,
+    status: 'running',
+  };
+}
+
+function readJSON(key) {
   try {
-    const raw = JSON.parse(localStorage.getItem(STATE_KEY) || 'null');
-    return raw && raw.durationMs ? raw : null;
+    return JSON.parse(localStorage.getItem(key) || 'null');
   } catch {
     return null;
   }
 }
 
+function load(now) {
+  const saved = readJSON(STATE_KEY);
+  if (validTimer(saved)) return saved;
+  const old = readJSON(OLD_STATE_KEY);
+  try {
+    localStorage.removeItem(OLD_STATE_KEY);
+    localStorage.removeItem(STATE_KEY); // unreadable (if anything): drop it
+  } catch {
+    // storage unavailable
+  }
+  const migrated = migrateOld(old, now);
+  return validTimer(migrated) ? migrated : null;
+}
+
 function save() {
   try {
-    if (state) localStorage.setItem(STATE_KEY, JSON.stringify(state));
+    if (timer) localStorage.setItem(STATE_KEY, JSON.stringify(timer));
     else localStorage.removeItem(STATE_KEY);
   } catch {
     // storage unavailable: the timer still runs, it just won't survive a reload
   }
 }
 
-function elapsedMs(now = Date.now()) {
-  if (!state) return 0;
-  return state.elapsedMs + (state.runningSince ? now - state.runningSince : 0);
+// ---------- chime + notification ----------
+
+// Called from user gestures (start, pill buttons) so iOS lets it play later.
+function unlockAudio() {
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) return;
+  try {
+    if (!audio) audio = new Ctx();
+    if (audio.state === 'suspended') audio.resume().catch(() => {});
+  } catch {
+    audio = null;
+  }
 }
 
-function remainingMs() {
-  return state ? Math.max(0, state.durationMs - elapsedMs()) : 0;
+function chime() {
+  if (!audio) return;
+  try {
+    if (audio.state === 'suspended') audio.resume().catch(() => {});
+    const t0 = audio.currentTime + 0.02;
+    [0, 0.28].forEach((offset, i) => {
+      const osc = audio.createOscillator();
+      const gain = audio.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = i ? 1046.5 : 784; // G5 then C6
+      gain.gain.setValueAtTime(0.0001, t0 + offset);
+      gain.gain.exponentialRampToValueAtTime(0.25, t0 + offset + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + offset + 0.35);
+      osc.connect(gain).connect(audio.destination);
+      osc.start(t0 + offset);
+      osc.stop(t0 + offset + 0.4);
+    });
+  } catch {
+    // no sound; the pill still shows it
+  }
 }
 
-function formatClock(ms) {
-  const total = Math.ceil(ms / 1000);
-  const m = Math.floor(total / 60);
-  const s = total % 60;
-  return `${m}:${String(s).padStart(2, '0')}`;
+// Asked once per device, the first time a timer is started (a user gesture).
+function askNotificationPermission() {
+  if (!('Notification' in window) || Notification.permission !== 'default') return;
+  try {
+    if (localStorage.getItem(NOTIFY_ASKED_KEY)) return;
+    localStorage.setItem(NOTIFY_ASKED_KEY, '1');
+  } catch {
+    return;
+  }
+  try {
+    const p = Notification.requestPermission();
+    if (p && p.catch) p.catch(() => {});
+  } catch {
+    // old callback-only API; skip
+  }
 }
+
+async function notify(title, body) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const icon = document.querySelector('link[rel="apple-touch-icon"]')?.href;
+  const options = { body, tag: 'life-tracker-focus', renotify: true, ...(icon ? { icon } : {}) };
+  try {
+    // Home-screen apps on iOS only support notifications via the service worker.
+    const reg = navigator.serviceWorker && (await navigator.serviceWorker.getRegistration());
+    if (reg && reg.showNotification) {
+      await reg.showNotification(title, options);
+      return;
+    }
+    new Notification(title, options);
+  } catch {
+    // not allowed here; the chime and the pill still tell you
+  }
+}
+
+// ---------- saving focus time ----------
 
 export function formatMinutes(minutes) {
   if (minutes < 60) return `${minutes} min`;
@@ -57,137 +173,235 @@ export function formatMinutes(minutes) {
   return m ? `${h} h ${m} min` : `${h} h`;
 }
 
+async function record(log, title) {
+  if (!log || log.minutes < 1) return;
+  try {
+    await focusApi.createFocusSession(userId, {
+      task_id: log.taskId,
+      started_at: new Date(log.startedAt).toISOString(),
+      minutes: log.minutes,
+    });
+    notifyDataChanged('focus');
+    showToast(`Saved ${formatMinutes(log.minutes)} of focus${title ? ` on “${title}”` : ''}.`, { type: 'success', duration: 3000 });
+  } catch (err) {
+    if (isMissingSchema(err)) showToast(`Focus session not saved. ${SCHEMA_003_HINT}`, { type: 'info', duration: 7000 });
+    else showError(err);
+  }
+}
+
+// ---------- rendering ----------
+
+function nextLabel(t, settings) {
+  return pomo.nextPhaseOf(t, settings).phase === 'focus' ? 'Start focus' : 'Start break';
+}
+
 function render() {
-  if (!state) {
+  listeners.forEach((fn) => fn());
+  document.body.classList.toggle('focus-pill-open', !!timer);
+  if (!timer) {
     el.pill.hidden = true;
+    el.todayBtn.hidden = false;
     document.title = baseTitle;
+    expanded = false;
     return;
   }
+  const settings = getPomodoroSettings();
+  const ended = timer.status === 'ended';
+  const paused = !ended && !!timer.pausedAt;
+  const label = pomo.phaseLabel(timer, settings);
+  const clock = pomo.formatClock(pomo.remainingMs(timer, Date.now()));
+
   el.pill.hidden = false;
-  const clock = formatClock(remainingMs());
-  el.task.textContent = state.taskTitle;
-  el.task.title = state.taskTitle;
-  el.time.textContent = clock;
-  const paused = !state.runningSince;
+  el.todayBtn.hidden = true;
+  el.pill.classList.toggle('ended', ended);
   el.pill.classList.toggle('paused', paused);
+  el.pill.classList.toggle('on-break', timer.phase !== 'focus');
+  el.pill.classList.toggle('expanded', expanded);
+  el.summary.setAttribute('aria-expanded', String(expanded || !PHONE.matches));
+  el.summary.title = PHONE.matches ? (expanded ? 'Show fewer buttons' : 'Show all timer buttons') : '';
+  el.label.textContent = label;
+  el.time.textContent = ended ? 'Time’s up' : paused ? `${clock} paused` : clock;
+  el.task.textContent = timer.title || '';
+  el.task.title = timer.title || '';
+  el.task.hidden = !timer.title;
+
+  el.nextBtn.hidden = !ended;
+  el.nextBtn.textContent = nextLabel(timer, settings);
+  el.pauseBtn.hidden = ended;
   el.pauseBtn.textContent = paused ? 'Resume' : 'Pause';
-  document.title = `${paused ? 'Paused' : clock} · ${baseTitle}`;
+  el.skipBtn.hidden = ended;
+  el.skipBtn.title = timer.phase === 'focus' ? 'End this focus round now and start the break' : 'End the break now and start focusing';
+  el.extendBtn.textContent = ended ? '+5 min' : '+5';
+  // Phone, collapsed: only the main action is shown next to the clock.
+  el.nextBtn.classList.toggle('focus-pill-main', ended);
+  el.pauseBtn.classList.toggle('focus-pill-main', !ended);
+
+  document.title = `${ended ? `${label} done` : paused ? 'Paused' : clock} · ${baseTitle}`;
+  // Phone: toasts sit just above the pill (style.css).
+  document.documentElement.style.setProperty('--focus-pill-h', `${el.pill.offsetHeight}px`);
+}
+
+function announce(text) {
+  el.status.textContent = text;
+}
+
+// ---------- timer changes ----------
+
+function set(next) {
+  timer = next;
+  save();
+  if (timer && timer.status === 'running') startTicker();
+  else stopTicker();
+  render();
 }
 
 function tick() {
-  if (!state) return;
-  if (remainingMs() <= 0) {
-    finish();
+  if (!timer) return;
+  if (pomo.isDue(timer, Date.now())) {
+    const settings = getPomodoroSettings();
+    const label = pomo.phaseLabel(timer, settings);
+    const next = nextLabel(timer, settings);
+    const body = timer.phase === 'focus' ? `Time for a break. Tap ${next} when you’re ready.` : 'Break’s over. Tap Start focus when you’re ready.';
+    set(pomo.endPhase(timer));
+    chime();
+    notify(`${label} done`, body);
+    announce(`${label} done. ${next}, or add 5 minutes.`);
     return;
   }
   render();
 }
 
 function startTicker() {
-  clearInterval(ticker);
-  ticker = setInterval(tick, 1000);
+  if (!ticker) ticker = setInterval(tick, 1000);
 }
 
-async function record(session, minutes) {
-  if (minutes < 1) return false;
-  try {
-    await focusApi.createFocusSession(userId, {
-      task_id: session.taskId,
-      started_at: session.startedAt,
-      minutes,
-    });
-    notifyDataChanged('focus');
-    return true;
-  } catch (err) {
-    if (isMissingSchema(err)) showToast(`Focus session not saved. ${SCHEMA_003_HINT}`, { type: 'info', duration: 7000 });
-    else showError(err);
-    return false;
-  }
-}
-
-async function finish() {
-  const session = state;
-  state = null;
-  save();
+function stopTicker() {
   clearInterval(ticker);
-  render();
-  const minutes = Math.round(session.durationMs / 60000);
-  if (await record(session, minutes)) {
-    showToast(`Focus done: ${formatMinutes(minutes)} on “${session.taskTitle}”.`, { type: 'success', duration: 8000 });
-  }
+  ticker = null;
 }
 
 export function isFocusRunning() {
-  return !!state;
+  return !!timer;
+}
+
+// For the command palette: what applies right now (null = no timer).
+export function timerState() {
+  if (!timer) return null;
+  return {
+    ended: timer.status === 'ended',
+    paused: !!timer.pausedAt,
+    phase: timer.phase,
+    nextLabel: nextLabel(timer, getPomodoroSettings()),
+  };
+}
+
+export function onTimerChange(fn) {
+  listeners.add(fn);
+}
+
+export async function startFocus(task = null) {
+  unlockAudio();
+  askNotificationPermission();
+  const now = Date.now();
+  const prev = timer;
+  // One timer at a time: keep what's been done, stay in the same cycle.
+  const round = prev ? (prev.phase === 'long' ? 0 : prev.round) : 0;
+  set(pomo.startFocus(task, getPomodoroSettings(), now, round));
+  const minutes = timer.minutes;
+  showToast(task ? `Focusing on “${task.title}” for ${formatMinutes(minutes)}.` : `Focus for ${formatMinutes(minutes)}.`, {
+    type: 'info',
+    duration: 2500,
+  });
+  if (prev) await record(pomo.stop(prev, now), prev.title);
+}
+
+// Start the next phase (after time's up), or skip ahead while running.
+export async function advanceTimer() {
+  if (!timer) return;
+  unlockAudio();
+  const prev = timer;
+  const settings = getPomodoroSettings();
+  const { timer: next, log } = pomo.advance(prev, settings, Date.now());
+  set(next);
+  announce(`${pomo.phaseLabel(next, settings)} started.`);
+  await record(log, prev.title);
+}
+
+export function togglePauseTimer() {
+  if (!timer || timer.status !== 'running') return;
+  unlockAudio();
+  set(pomo.togglePause(timer, Date.now()));
+}
+
+export function extendTimer() {
+  if (!timer) return;
+  unlockAudio();
+  set(pomo.extend(timer, Date.now(), 5));
 }
 
 export async function stopFocus() {
-  if (!state) return;
-  const session = state;
-  const minutes = Math.floor(elapsedMs() / 60000);
-  state = null;
-  save();
-  clearInterval(ticker);
-  render();
-  if (minutes < 1) {
-    showToast('Focus stopped (under a minute, not saved).', { type: 'info', duration: 3000 });
-    return;
+  if (!timer) return;
+  const prev = timer;
+  const log = pomo.stop(prev, Date.now());
+  set(null);
+  if (!log) {
+    const msg = prev.phase === 'focus' ? 'Focus stopped (under a minute, not saved).' : 'Timer stopped.';
+    showToast(msg, { type: 'info', duration: 2500 });
   }
-  if (await record(session, minutes)) {
-    showToast(`Saved ${formatMinutes(minutes)} of focus on “${session.taskTitle}”.`, { type: 'success' });
-  }
+  await record(log, prev.title);
 }
 
-function togglePause() {
-  if (!state) return;
-  if (state.runningSince) {
-    state.elapsedMs = elapsedMs();
-    state.runningSince = null;
-  } else {
-    state.runningSince = Date.now();
-  }
-  save();
+function toggleExpanded() {
+  if (!PHONE.matches) return;
+  expanded = !expanded;
   render();
-}
-
-export async function startFocus(task, minutes = getFocusMinutes()) {
-  if (state) await stopFocus(); // one timer at a time; keep what's been done
-  const now = Date.now();
-  state = {
-    taskId: task.id,
-    taskTitle: task.title,
-    startedAt: new Date(now).toISOString(),
-    durationMs: minutes * 60000,
-    elapsedMs: 0,
-    runningSince: now,
-  };
-  save();
-  startTicker();
-  render();
-  showToast(`Focusing on “${task.title}” for ${formatMinutes(minutes)}.`, { type: 'info', duration: 3000 });
 }
 
 export function initFocus(uid) {
   userId = uid;
   Object.assign(el, {
     pill: document.getElementById('focus-pill'),
+    summary: document.getElementById('focus-pill-summary'),
+    label: document.getElementById('focus-pill-label'),
     task: document.getElementById('focus-pill-task'),
     time: document.getElementById('focus-pill-time'),
+    status: document.getElementById('focus-pill-status'),
+    nextBtn: document.getElementById('focus-next-btn'),
     pauseBtn: document.getElementById('focus-pause-btn'),
+    skipBtn: document.getElementById('focus-skip-btn'),
+    extendBtn: document.getElementById('focus-extend-btn'),
     stopBtn: document.getElementById('focus-stop-btn'),
+    todayBtn: document.getElementById('today-focus-btn'),
   });
-  el.pauseBtn.addEventListener('click', togglePause);
+  el.nextBtn.addEventListener('click', advanceTimer);
+  el.pauseBtn.addEventListener('click', togglePauseTimer);
+  el.skipBtn.addEventListener('click', advanceTimer);
+  el.extendBtn.addEventListener('click', extendTimer);
   el.stopBtn.addEventListener('click', stopFocus);
+  el.summary.addEventListener('click', toggleExpanded);
+  el.todayBtn.addEventListener('click', () => startFocus(null));
+  PHONE.addEventListener('change', () => {
+    expanded = false;
+    render();
+  });
 
-  state = load();
-  if (state) {
-    startTicker();
-    tick(); // finishes right away if it ran out while the app was closed
-  }
-  render();
+  const now = Date.now();
+  timer = load(now);
+  // Time ran out while the app was closed: wait for a choice, don't advance.
+  if (timer && pomo.isDue(timer, now)) timer = pomo.endPhase(timer);
+  set(timer);
 
   // Timers are throttled in background tabs; catch up as soon as we're back.
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) tick();
+  });
+  // Another tab changed the timer.
+  window.addEventListener('storage', (e) => {
+    if (e.key !== STATE_KEY) return;
+    const saved = readJSON(STATE_KEY);
+    timer = validTimer(saved) ? saved : null;
+    if (timer && timer.status === 'running') startTicker();
+    else stopTicker();
+    render();
   });
 }

@@ -1,6 +1,8 @@
 // Per-device preferences (localStorage, "kanban." prefix like the other keys).
 // Color palette and light/dark live in theme-boot.js.
 
+import { settingsFrom } from './pomodoro.js';
+
 const FOCUS_KEY = 'kanban.focusMinutes';
 
 function read(key) {
@@ -19,15 +21,28 @@ function write(key, value) {
   }
 }
 
-export const DEFAULT_FOCUS_MINUTES = 25;
+// Pomodoro lengths (minutes) and the long-break interval, validated by the
+// shared engine (js/pomodoro.js). The old single "focus length" key is still
+// read as the focus length until the first save.
+const POMODORO_KEY = 'kanban.pomodoroSettings';
 
-export function getFocusMinutes() {
-  const n = Number(read(FOCUS_KEY));
-  return Number.isInteger(n) && n >= 1 && n <= 180 ? n : DEFAULT_FOCUS_MINUTES;
+export function getPomodoroSettings() {
+  let raw = {};
+  try {
+    raw = JSON.parse(read(POMODORO_KEY)) || {};
+  } catch {
+    raw = {};
+  }
+  if (raw.focus == null && read(FOCUS_KEY) != null) raw = { ...raw, focus: read(FOCUS_KEY) };
+  return settingsFrom(raw);
 }
 
-export function setFocusMinutes(minutes) {
-  write(FOCUS_KEY, minutes);
+export function setPomodoroSettings(values) {
+  write(POMODORO_KEY, JSON.stringify(settingsFrom({ ...getPomodoroSettings(), ...values })));
+}
+
+export function getFocusMinutes() {
+  return getPomodoroSettings().focus;
 }
 
 const WEIGHT_UNIT_KEY = 'kanban.weightUnit';

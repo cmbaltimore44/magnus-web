@@ -44,6 +44,7 @@ const SHELL = [
   'js/openLibrary.js',
   'js/palettes.js',
   'js/phoneNav.js',
+  'js/pomodoro.js',
   'js/quickAdd.js',
   'js/quickAddBar.js',
   'js/resilientFetch.js',
@@ -131,4 +132,16 @@ self.addEventListener('fetch', (event) => {
   // Only the app shell; never Supabase (or anything else).
   if (!sameOrigin && url.origin !== CDN) return;
   event.respondWith(networkFirst(request, sameOrigin));
+});
+
+// Focus timer notifications (js/focus.js): tapping one brings the app back.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      const client = list.find((c) => 'focus' in c);
+      if (client) return client.focus();
+      return self.clients.openWindow ? self.clients.openWindow('./') : undefined;
+    })
+  );
 });

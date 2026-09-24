@@ -2,6 +2,7 @@ import { fillPaletteSelect, getMode, setMode, setPalette, getPalette, onThemeCha
 import * as settings from '../settings.js';
 import { showToast } from '../toast.js';
 import { SECTIONS, renderTabBar } from '../phoneNav.js';
+import { settingsFrom } from '../pomodoro.js';
 
 // Settings: per-device preferences (all in localStorage).
 
@@ -89,28 +90,42 @@ function togglePhoneTab(key, on) {
 
 function render() {
   renderTheme();
-  el.focus.value = String(settings.getFocusMinutes());
+  const pomo = settings.getPomodoroSettings();
+  POMO_FIELDS.forEach(([key]) => {
+    el.pomo[key].value = String(pomo[key]);
+  });
   renderWeightUnit();
   el.startView.value = settings.getStartView();
   renderPhoneTabs();
 }
 
-function handleFocusChange() {
-  const n = Number(el.focus.value);
-  if (!Number.isInteger(n) || n < 1 || n > 180) {
-    showToast('Focus length should be a whole number of minutes from 1 to 180.', { type: 'error' });
-    el.focus.value = String(settings.getFocusMinutes());
+// [key, label, min, max]; the engine's settingsFrom has the same ranges.
+const POMO_FIELDS = [
+  ['focus', 'Focus', 1, 180],
+  ['short', 'Break', 1, 60],
+  ['long', 'Long break', 1, 90],
+  ['every', 'Rounds before a long break', 1, 12],
+];
+
+function handlePomoChange(key, label, lo, hi) {
+  const input = el.pomo[key];
+  const n = Number(input.value);
+  if (!Number.isInteger(n) || settingsFrom({ [key]: n })[key] !== n) {
+    const unit = key === 'every' ? '' : ' of minutes';
+    showToast(`${label} should be a whole number${unit} from ${lo} to ${hi}.`, { type: 'error' });
+    input.value = String(settings.getPomodoroSettings()[key]);
     return;
   }
-  settings.setFocusMinutes(n);
-  showToast(`Focus sessions now last ${n} min.`, { type: 'success', duration: 2000 });
+  settings.setPomodoroSettings({ [key]: n });
+  const msg = key === 'every' ? `Long break after every ${n} focus round${n === 1 ? '' : 's'}.` : `${label}: ${n} min.`;
+  showToast(msg, { type: 'success', duration: 2000 });
 }
 
 export function initSettings() {
   Object.assign(el, {
     palette: document.getElementById('settings-palette'),
     mode: document.getElementById('settings-mode'),
-    focus: document.getElementById('settings-focus'),
+    pomo: Object.fromEntries(POMO_FIELDS.map(([key]) => [key, document.getElementById(`settings-pomo-${key}`)])),
     weightUnit: document.getElementById('settings-weight-unit'),
     startView: document.getElementById('settings-start-view'),
     phoneTabs: document.getElementById('settings-phone-tabs'),
@@ -125,7 +140,7 @@ export function initSettings() {
     el.startView.appendChild(opt);
   });
   el.startView.addEventListener('change', () => settings.setStartView(el.startView.value));
-  el.focus.addEventListener('change', handleFocusChange);
+  POMO_FIELDS.forEach(([key, label, lo, hi]) => el.pomo[key].addEventListener('change', () => handlePomoChange(key, label, lo, hi)));
   onThemeChange(renderTheme);
   render();
 }
