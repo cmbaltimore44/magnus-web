@@ -5,6 +5,10 @@ import { showError, showToast } from '../toast.js';
 import { stopVoiceInput } from '../voiceInput.js';
 import { deleteWithUndo } from '../undo.js';
 import { notifyDataChanged } from '../events.js';
+import { startFocus, formatMinutes } from '../focus.js';
+import { focusMinutesForTask } from '../data/focus.js';
+import { getFocusMinutes } from '../settings.js';
+import { isMissingSchema, SCHEMA_003_HINT } from '../schema.js';
 
 const COLORS = [
   '#bf5433', '#c9463f', '#b8791a', '#2fa84f',
@@ -48,6 +52,9 @@ function cacheElements() {
     taskNotes: document.getElementById('task-notes'),
     taskDeleteBtn: document.getElementById('task-delete-btn'),
     taskCancelBtn: document.getElementById('task-cancel-btn'),
+    taskFocusRow: document.getElementById('task-focus-row'),
+    taskFocusBtn: document.getElementById('task-focus-btn'),
+    taskFocusTotal: document.getElementById('task-focus-total'),
 
     categoryModalOverlay: document.getElementById('category-modal-overlay'),
     categoryModalClose: document.getElementById('category-modal-close'),
@@ -247,6 +254,7 @@ export function openTaskModal(taskId, defaultColumn) {
     el.taskPriority.value = task.priority || 'medium';
     el.taskNotes.value = task.notes || '';
     el.taskDeleteBtn.hidden = false;
+    renderTaskFocus(task);
   } else {
     el.taskModalTitle.textContent = 'New Task';
     el.taskForm.reset();
@@ -254,10 +262,34 @@ export function openTaskModal(taskId, defaultColumn) {
     el.taskStatus.value = defaultColumn || 'todo';
     el.taskPriority.value = 'medium';
     el.taskDeleteBtn.hidden = true;
+    el.taskFocusRow.hidden = true;
   }
 
   el.taskModalOverlay.classList.add('open');
   el.taskTitle.focus();
+}
+
+// Focus timer controls + total focused time, in the editor of an existing task.
+async function renderTaskFocus(task) {
+  el.taskFocusRow.hidden = false;
+  el.taskFocusBtn.textContent = `Focus ${getFocusMinutes()} min`;
+  el.taskFocusBtn.disabled = task.status === 'done';
+  el.taskFocusTotal.textContent = '';
+  try {
+    const minutes = await focusMinutesForTask(task.id);
+    if (editingTaskId !== task.id) return;
+    el.taskFocusTotal.textContent = minutes ? `${formatMinutes(minutes)} focused in total` : 'No focus time yet';
+  } catch (err) {
+    if (editingTaskId !== task.id) return;
+    el.taskFocusTotal.textContent = isMissingSchema(err) ? `Focus tracking: ${SCHEMA_003_HINT}` : '';
+  }
+}
+
+function handleFocusClick() {
+  const task = tasks.find((t) => t.id === editingTaskId);
+  if (!task) return;
+  closeTaskModal();
+  startFocus({ id: task.id, title: el.taskTitle.value.trim() || task.title });
 }
 
 function closeTaskModal() {
@@ -527,6 +559,7 @@ export async function initBoard(uid) {
 
   el.taskForm.addEventListener('submit', handleTaskSubmit);
   el.taskDeleteBtn.addEventListener('click', handleTaskDelete);
+  el.taskFocusBtn.addEventListener('click', handleFocusClick);
   el.taskModalClose.addEventListener('click', closeTaskModal);
   el.taskCancelBtn.addEventListener('click', closeTaskModal);
   el.taskModalOverlay.addEventListener('click', (e) => {

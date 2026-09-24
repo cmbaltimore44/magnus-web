@@ -11,6 +11,7 @@ import { initSearch } from './search.js';
 import { initVoiceInput } from './voiceInput.js';
 import { initQuickAdd } from './quickAddBar.js';
 import { onDataChanged } from './events.js';
+import { initFocus } from './focus.js';
 
 const authScreen = document.getElementById('auth-screen');
 const appShell = document.getElementById('app-shell');
@@ -158,6 +159,7 @@ async function enterApp(session) {
   initSearch();
   initVoiceInput();
   initQuickAdd(uid);
+  initFocus(uid);
   wireRefreshOnFocus();
   wireDataChanged();
 }

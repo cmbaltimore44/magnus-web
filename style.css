@@ -1892,3 +1892,84 @@ input, textarea, select, button {
   .upcoming-title { white-space: normal; }
   .upcoming-meta { grid-column: 3; }
 }
+
+/* ---------- focus timer ---------- */
+
+.task-focus-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 2px 0 10px 0;
+}
+.task-focus-row .btn:disabled { opacity: 0.6; cursor: default; }
+
+.task-focus-total {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.focus-pill {
+  position: fixed;
+  left: 188px;
+  bottom: 20px;
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(460px, calc(100vw - 280px));
+  padding: 7px 8px 7px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  box-shadow: var(--toast-shadow);
+  font-size: 13px;
+  color: var(--text);
+}
+.focus-pill.paused { border-left-color: var(--text-muted); }
+
+.focus-pill-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.focus-pill-task {
+  flex: 1;
+  min-width: 0;
+  font-weight: 550;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.focus-pill-time {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.focus-pill-btn {
+  padding: 4px 9px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 550;
+  cursor: pointer;
+}
+.focus-pill-btn:hover { background: var(--hover-bg); }
+
+@media (max-width: 720px) {
+  .focus-pill {
+    left: 12px;
+    right: 68px;
+    max-width: none;
+    bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+  }
+}

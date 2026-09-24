@@ -411,6 +411,15 @@
     </div>
   </div>
 
+  <!-- Focus timer (shown while one is running) -->
+  <div class="focus-pill" id="focus-pill" role="timer" aria-live="off" hidden>
+    <span class="focus-pill-label">Focus</span>
+    <span class="focus-pill-task" id="focus-pill-task"></span>
+    <span class="focus-pill-time" id="focus-pill-time"></span>
+    <button type="button" class="focus-pill-btn" id="focus-pause-btn">Pause</button>
+    <button type="button" class="focus-pill-btn" id="focus-stop-btn">Stop</button>
+  </div>
+
   <!-- Global search -->
   <button id="quickadd-fab" class="quickadd-fab" title="Quick add" aria-label="Quick add">+</button>
   <button id="search-fab" class="search-fab" title="Search (⌘K)">🔍</button>
@@ -474,6 +483,11 @@
           <span>Notes<button type="button" class="voice-btn" data-voice-target="task-notes" title="Dictate" aria-label="Dictate"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z"/><path d="M19 11a7 7 0 0 1-14 0"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg></button></span>
           <textarea id="task-notes" rows="3" placeholder="Optional details…"></textarea>
         </label>
+
+        <div class="task-focus-row" id="task-focus-row" hidden>
+          <button type="button" class="btn btn-ghost" id="task-focus-btn">Start focus</button>
+          <span class="task-focus-total" id="task-focus-total"></span>
+        </div>
 
         <div class="modal-actions">
           <button type="button" class="btn btn-danger" id="task-delete-btn" hidden>Delete</button>
