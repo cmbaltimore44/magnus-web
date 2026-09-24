@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https: data:; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https: data:; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net https://openlibrary.org" />
 <meta name="theme-color" content="#bf5433" />
 <title>Life Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -314,6 +314,11 @@
                 <span>Author</span>
                 <input type="text" id="book-author" />
               </label>
+              <div class="book-lookup">
+                <button type="button" id="book-lookup-btn" class="btn btn-ghost">Look up</button>
+                <span class="book-lookup-hint">Finds the cover and ISBN on Open Library, by ISBN or by title and author.</span>
+              </div>
+              <div class="book-lookup-results" id="book-lookup-results" hidden></div>
               <label class="field">
                 <span>Cover image URL</span>
                 <input type="text" id="book-cover-url" />

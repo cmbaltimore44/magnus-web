@@ -1,9 +1,10 @@
 import * as booksApi from '../data/books.js';
 import * as quotesApi from '../data/quotes.js';
 import { hashSegments } from '../hash.js';
-import { showError, showConfirmToast } from '../toast.js';
+import { showError, showToast, showConfirmToast } from '../toast.js';
 import { stopVoiceInput } from '../voiceInput.js';
 import { deleteWithUndo } from '../undo.js';
+import { lookupBooks, normalizeIsbn } from '../openLibrary.js';
 
 const BOOK_GROUPS = [
   { key: 'reading', label: 'Currently Reading', collapsible: false },
@@ -70,6 +71,8 @@ function cacheElements() {
     rating: document.getElementById('book-rating'),
     isbn: document.getElementById('book-isbn'),
     notes: document.getElementById('book-notes'),
+    lookupBtn: document.getElementById('book-lookup-btn'),
+    lookupResults: document.getElementById('book-lookup-results'),
     saveBookBtn: document.getElementById('save-book-btn'),
     deleteBookBtn: document.getElementById('delete-book-btn'),
     addHighlightBtn: document.getElementById('add-highlight-btn'),
@@ -210,7 +213,97 @@ async function openBookDetail(id) {
   el.rating.value = book.rating != null ? String(book.rating) : '';
   el.isbn.value = book.isbn || '';
   el.notes.value = book.notes || '';
+  clearLookup();
   renderHighlights();
+}
+
+// ---------- Open Library lookup ----------
+
+const PLACEHOLDER_TITLE = 'Untitled Book';
+let lookupSeq = 0;
+
+function clearLookup() {
+  lookupSeq++;
+  el.lookupResults.hidden = true;
+  el.lookupResults.innerHTML = '';
+}
+
+function lookupMessage(text) {
+  el.lookupResults.hidden = false;
+  el.lookupResults.innerHTML = '';
+  const hint = document.createElement('div');
+  hint.className = 'book-lookup-message';
+  hint.textContent = text;
+  el.lookupResults.appendChild(hint);
+}
+
+async function handleLookup() {
+  const isbn = normalizeIsbn(el.isbn.value);
+  const title = el.title.value.trim() === PLACEHOLDER_TITLE ? '' : el.title.value.trim();
+  const query = isbn || [title, el.author.value.trim()].filter(Boolean).join(' ');
+  if (!query) {
+    lookupMessage('Type an ISBN, or a title (and author), first.');
+    return;
+  }
+  const seq = ++lookupSeq;
+  lookupMessage('Searching Open Library…');
+  let results;
+  try {
+    results = await lookupBooks(query);
+  } catch {
+    if (seq === lookupSeq) lookupMessage("Couldn't reach Open Library. Check your connection and try again.");
+    return;
+  }
+  if (seq !== lookupSeq) return;
+  if (!results.length) {
+    lookupMessage('No matches on Open Library.');
+    return;
+  }
+  el.lookupResults.innerHTML = '';
+  results.forEach((r) => el.lookupResults.appendChild(renderLookupResult(r)));
+}
+
+function renderLookupResult(result) {
+  const row = document.createElement('button');
+  row.type = 'button';
+  row.className = 'book-lookup-result';
+
+  const cover = document.createElement('img');
+  cover.className = 'book-cover-thumb';
+  cover.alt = '';
+  cover.loading = 'lazy';
+  if (result.cover_image_url) cover.src = result.cover_image_url;
+  cover.addEventListener('error', () => cover.removeAttribute('src'));
+  row.appendChild(cover);
+
+  const meta = document.createElement('span');
+  meta.className = 'book-row-meta';
+  const title = document.createElement('span');
+  title.className = 'book-row-title';
+  title.textContent = result.title;
+  meta.appendChild(title);
+  const sub = document.createElement('span');
+  sub.className = 'book-row-author';
+  sub.textContent = [result.author, result.year].filter(Boolean).join(' · ');
+  meta.appendChild(sub);
+  row.appendChild(meta);
+
+  row.addEventListener('click', () => applyLookup(result));
+  return row;
+}
+
+// Fills the empty fields (a typed title/author wins) plus cover and ISBN.
+function applyLookup(result) {
+  const title = el.title.value.trim();
+  if ((!title || title === PLACEHOLDER_TITLE) && result.title) el.title.value = result.title;
+  if (!el.author.value.trim() && result.author) el.author.value = result.author;
+  if (result.isbn) el.isbn.value = result.isbn;
+  if (result.cover_image_url) {
+    el.coverUrl.value = result.cover_image_url;
+    el.cover.src = result.cover_image_url;
+  }
+  clearLookup();
+  showToast('Filled in from Open Library. Save to keep it.', { type: 'success', duration: 3000 });
 }
 
 async function handleSaveBook() {
@@ -514,6 +607,7 @@ export async function initLibrary(uid) {
   el.newBookBtn.addEventListener('click', handleNewBook);
   el.saveBookBtn.addEventListener('click', handleSaveBook);
   el.deleteBookBtn.addEventListener('click', handleDeleteBook);
+  el.lookupBtn.addEventListener('click', handleLookup);
   el.coverUrl.addEventListener('input', () => {
     el.cover.src = el.coverUrl.value.trim();
   });

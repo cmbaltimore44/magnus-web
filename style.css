@@ -1973,3 +1973,50 @@ input, textarea, select, button {
     bottom: calc(90px + env(safe-area-inset-bottom, 0px));
   }
 }
+
+/* ---------- Open Library lookup (book detail) ---------- */
+
+.book-lookup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: -2px 0 12px 0;
+}
+
+.book-lookup .btn { flex-shrink: 0; white-space: nowrap; }
+
+.book-lookup-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.book-lookup-results {
+  display: flex;
+  flex-direction: column;
+  margin: -4px 0 14px 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.book-lookup-message {
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.book-lookup-result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.book-lookup-result:last-child { border-bottom: none; }
+.book-lookup-result:hover { background: var(--hover-bg); }
+.book-lookup-result .book-row-meta { display: flex; flex-direction: column; gap: 2px; }
