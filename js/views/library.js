@@ -182,7 +182,7 @@ function renderBooksList() {
   });
 }
 
-async function handleNewBook() {
+export async function handleNewBook() {
   try {
     const created = await booksApi.createBook(userId, { title: 'Untitled Book', status: 'want_to_read' }, books.length);
     books.unshift(created);

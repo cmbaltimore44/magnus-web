@@ -121,6 +121,12 @@ export function initQuickAdd(uid) {
   el.form.addEventListener('submit', handleSubmit);
   el.input.addEventListener('input', renderPreview);
   el.input.addEventListener('focus', loadCategories);
+  // Phone sheet: tapping away from an empty quick add closes it.
+  el.input.addEventListener('blur', () => {
+    setTimeout(() => {
+      if (!el.input.value.trim() && !el.form.contains(document.activeElement)) closeQuickAdd();
+    }, 150);
+  });
   el.input.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       e.stopPropagation();

@@ -59,6 +59,7 @@
       <div class="sidebar-footer">
         <select id="palette-select" class="palette-select" title="Color theme" aria-label="Color theme"></select>
         <button id="theme-toggle-btn" class="icon-toggle-btn" title="Light/dark mode">🌓</button>
+        <button id="command-btn" class="btn btn-ghost" title="Command palette (⌘⇧P)">Commands</button>
         <button id="sign-out-btn" class="btn btn-ghost">Sign out</button>
       </div>
     </aside>
@@ -514,8 +515,8 @@
 
   <div class="modal-overlay" id="search-modal-overlay">
     <div class="modal search-modal">
-      <input type="text" id="search-modal-input" class="search-modal-input" placeholder="Search tasks, projects, books, quotes…" autocomplete="off" />
-      <div class="search-hint">↑↓ to navigate · ↵ to open · esc to close</div>
+      <input type="text" id="search-modal-input" class="search-modal-input" placeholder="Search, or type > for commands…" autocomplete="off" />
+      <div class="search-hint" id="search-hint">↑↓ to navigate · ↵ to open · &gt; for commands · esc to close</div>
       <div id="search-results" class="search-results"></div>
     </div>
   </div>

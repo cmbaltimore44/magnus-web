@@ -3,23 +3,32 @@ import { showError } from './toast.js';
 import { openTaskModal, refreshBoard } from './views/board.js';
 import { openQuoteResult } from './views/library.js';
 import { highlightRoutine } from './views/routines.js';
+import { loadCommands, filterCommands } from './commands.js';
 
 const PROJECT_STATUS_LABELS = { not_started: 'Not Started', in_progress: 'In Progress', done: 'Done' };
 const TIME_OF_DAY_LABELS = { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening' };
 const TYPE_ORDER = ['task', 'project', 'book', 'quote', 'routine'];
 const TYPE_LABELS = { task: 'Tasks', project: 'Projects', book: 'Books', quote: 'Quotes', routine: 'Routines' };
 const MAX_PER_GROUP = 8;
+const SEARCH_HINT = '↑↓ to navigate · ↵ to open · > for commands · esc to close';
+const COMMAND_HINT = '↑↓ to navigate · ↵ to run · esc to close';
 
 const el = {};
 let index = [];
 let renderedItems = [];
 let activeIndex = -1;
+let commands = [];
+
+// Typing ">" first (VS Code style) turns search into the command palette.
+const isCommandMode = (term) => term.trimStart().startsWith('>');
 
 function cacheElements() {
   Object.assign(el, {
     fab: document.getElementById('search-fab'),
     overlay: document.getElementById('search-modal-overlay'),
     input: document.getElementById('search-modal-input'),
+    hint: document.getElementById('search-hint'),
+    commandBtn: document.getElementById('command-btn'),
     results: document.getElementById('search-results'),
   });
 }
@@ -99,9 +108,49 @@ function setActive(newIndex) {
   rows[activeIndex].scrollIntoView({ block: 'nearest' });
 }
 
+function renderRow(item) {
+  const row = document.createElement('div');
+  row.className = 'search-result-row';
+
+  const title = document.createElement('div');
+  title.className = 'search-result-title';
+  title.textContent = item.title;
+  row.appendChild(title);
+
+  if (item.subtitle) {
+    const subtitle = document.createElement('div');
+    subtitle.className = 'search-result-subtitle';
+    subtitle.textContent = item.subtitle;
+    row.appendChild(subtitle);
+  }
+
+  row.addEventListener('click', () => selectResult(item));
+  el.results.appendChild(row);
+  renderedItems.push(item);
+}
+
+function renderCommands(query) {
+  const matches = filterCommands(commands, query);
+  if (!matches.length) {
+    renderHint(commands.length ? 'No matching commands.' : 'Loading…');
+    return;
+  }
+  const label = document.createElement('div');
+  label.className = 'search-result-group-label';
+  label.textContent = 'Commands';
+  el.results.appendChild(label);
+  matches.forEach((c) => renderRow({ type: 'command', title: c.label, subtitle: c.hint ? `Shortcut: ${c.hint}` : '', run: c.run }));
+  setActive(0);
+}
+
 function renderResults(term) {
   el.results.innerHTML = '';
   renderedItems = [];
+  el.hint.textContent = isCommandMode(term) ? COMMAND_HINT : SEARCH_HINT;
+  if (isCommandMode(term)) {
+    renderCommands(term.trimStart().slice(1));
+    return;
+  }
   const q = term.trim().toLowerCase();
   if (!q) {
     renderHint('Start typing to search tasks, projects, books, quotes, and routines.');
@@ -124,26 +173,7 @@ function renderResults(term) {
     label.textContent = TYPE_LABELS[type];
     el.results.appendChild(label);
 
-    matches.forEach((item) => {
-      const row = document.createElement('div');
-      row.className = 'search-result-row';
-
-      const title = document.createElement('div');
-      title.className = 'search-result-title';
-      title.textContent = item.title;
-      row.appendChild(title);
-
-      if (item.subtitle) {
-        const subtitle = document.createElement('div');
-        subtitle.className = 'search-result-subtitle';
-        subtitle.textContent = item.subtitle;
-        row.appendChild(subtitle);
-      }
-
-      row.addEventListener('click', () => selectResult(item));
-      el.results.appendChild(row);
-      renderedItems.push(item);
-    });
+    matches.forEach(renderRow);
   });
 
   if (renderedItems.length === 0) {
@@ -156,7 +186,9 @@ function renderResults(term) {
 async function selectResult(item) {
   close();
   try {
-    if (item.type === 'project') {
+    if (item.type === 'command') {
+      await item.run();
+    } else if (item.type === 'project') {
       location.hash = '#/projects/' + item.id;
     } else if (item.type === 'book') {
       location.hash = '#/library/books/' + item.id;
@@ -175,19 +207,26 @@ async function selectResult(item) {
   }
 }
 
-export async function open() {
+export async function open(prefill = '') {
   el.overlay.classList.add('open');
-  el.input.value = '';
-  renderHint('Loading…');
+  el.input.value = prefill;
+  commands = [];
+  renderResults(prefill);
   el.input.focus();
-  try {
-    const raw = await fetchSearchIndex();
-    index = buildIndex(raw);
-  } catch (err) {
-    showError(err);
-    index = [];
-  }
-  renderResults('');
+  const [raw, cmds] = await Promise.all([
+    fetchSearchIndex().catch((err) => {
+      showError(err);
+      return null;
+    }),
+    loadCommands(),
+  ]);
+  index = raw ? buildIndex(raw) : [];
+  commands = cmds;
+  renderResults(el.input.value);
+}
+
+export function openCommandPalette() {
+  return open('>');
 }
 
 function close() {
@@ -197,7 +236,8 @@ function close() {
 export function initSearch() {
   cacheElements();
 
-  el.fab.addEventListener('click', open);
+  el.fab.addEventListener('click', () => open());
+  el.commandBtn.addEventListener('click', openCommandPalette);
 
   el.overlay.addEventListener('click', (e) => {
     if (e.target === el.overlay) close();
@@ -220,7 +260,10 @@ export function initSearch() {
   });
 
   document.addEventListener('keydown', (e) => {
-    if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'p' || e.key === 'P')) {
+      e.preventDefault();
+      openCommandPalette();
+    } else if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
       e.preventDefault();
       open();
     } else if (e.key === 'Escape' && el.overlay.classList.contains('open')) {

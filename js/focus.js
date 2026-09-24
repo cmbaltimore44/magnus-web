@@ -117,6 +117,10 @@ async function finish() {
   }
 }
 
+export function isFocusRunning() {
+  return !!state;
+}
+
 export async function stopFocus() {
   if (!state) return;
   const session = state;

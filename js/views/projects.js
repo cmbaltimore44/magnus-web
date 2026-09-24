@@ -258,7 +258,7 @@ async function handleDelete() {
   }
 }
 
-async function handleNewProject() {
+export async function handleNewProject() {
   try {
     const created = await projectsApi.createProject(
       userId,
