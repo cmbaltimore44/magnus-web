@@ -61,6 +61,15 @@
     </aside>
 
     <div class="content">
+      <!-- Quick add (every view; on phones the floating + opens it) -->
+      <form class="quickadd" id="quickadd-form" autocomplete="off">
+        <div class="quickadd-row">
+          <input type="text" id="quickadd-input" placeholder="Quick add: renew passport fri !high #home *" aria-label="Quick add a task" enterkeyhint="done" />
+          <button type="submit" class="btn btn-primary quickadd-btn" title="Add task (shortcut: a)" aria-label="Add task">+</button>
+        </div>
+        <div class="quickadd-preview" id="quickadd-preview" aria-live="polite" hidden></div>
+      </form>
+
       <!-- Today view -->
       <section class="view" id="view-today">
         <header class="topbar">
@@ -391,6 +400,7 @@
   </div>
 
   <!-- Global search -->
+  <button id="quickadd-fab" class="quickadd-fab" title="Quick add" aria-label="Quick add">+</button>
   <button id="search-fab" class="search-fab" title="Search (⌘K)">🔍</button>
 
   <div class="modal-overlay" id="search-modal-overlay">

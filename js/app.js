@@ -8,6 +8,8 @@ import { initProjects, refreshProjects } from './views/projects.js';
 import { initLibrary, refreshLibrary } from './views/library.js';
 import { initSearch } from './search.js';
 import { initVoiceInput } from './voiceInput.js';
+import { initQuickAdd } from './quickAddBar.js';
+import { onDataChanged } from './events.js';
 
 const authScreen = document.getElementById('auth-screen');
 const appShell = document.getElementById('app-shell');
@@ -113,6 +115,14 @@ function wireRefreshOnFocus() {
   window.addEventListener('focus', refresh);
 }
 
+// Writes made from outside the current view (quick add, undo, …) refresh it.
+function wireDataChanged() {
+  onDataChanged((source) => {
+    const view = currentView();
+    if (source !== view) REFRESH[view]?.();
+  });
+}
+
 // ---------- boot ----------
 
 async function enterApp(session) {
@@ -138,7 +148,9 @@ async function enterApp(session) {
   ]);
   initSearch();
   initVoiceInput();
+  initQuickAdd(uid);
   wireRefreshOnFocus();
+  wireDataChanged();
 }
 
 (async function boot() {
