@@ -9,7 +9,8 @@ html[data-palette="hearth"] {
   --bg: #f2e2d6;
   --surface: #f9f1eb;
   --sidebar-bg: #f4e5db;
-  --surface-subtle: rgba(0,0,0,0.03);
+  --surface-subtle: rgba(0,0,0,0.0225);
+  --accent-tint: #eedbce;
   --border: #d8c9be;
   --text: #2b2420;
   --text-muted: #6a6156;
@@ -35,7 +36,8 @@ html[data-palette="hearth"][data-theme="dark"] {
   --bg: #211c18;
   --surface: #27221e;
   --sidebar-bg: #1a1613;
-  --surface-subtle: rgba(255,255,255,0.03);
+  --surface-subtle: rgba(0,0,0,0.18);
+  --accent-tint: #2b201a;
   --border: #3d3833;
   --text: #ece2d6;
   --text-muted: #998c7d;
@@ -61,7 +63,8 @@ html[data-palette="heather"] {
   --bg: #d2d4c8;
   --surface: #e9eae4;
   --sidebar-bg: #d7d9cf;
-  --surface-subtle: rgba(0,0,0,0.03);
+  --surface-subtle: rgba(0,0,0,0.025);
+  --accent-tint: #cdcdc2;
   --border: #bbbdb3;
   --text: #20242a;
   --text-muted: #4f5959;
@@ -88,6 +91,7 @@ html[data-palette="heather"][data-theme="dark"] {
   --surface: #2b2f33;
   --sidebar-bg: #191c21;
   --surface-subtle: rgba(255,255,255,0.03);
+  --accent-tint: #2d2f36;
   --border: #393d40;
   --text: #d2d4c8;
   --text-muted: #97a3a3;
@@ -114,6 +118,7 @@ html[data-palette="lakeglow"] {
   --surface: #fcf6f1;
   --sidebar-bg: #f9eee5;
   --surface-subtle: rgba(0,0,0,0.03);
+  --accent-tint: #f1dfd3;
   --border: #dcd2cd;
   --text: #1f2340;
   --text-muted: #605c73;
@@ -140,6 +145,7 @@ html[data-palette="lakeglow"][data-theme="dark"] {
   --surface: #28293a;
   --sidebar-bg: #151725;
   --surface-subtle: rgba(255,255,255,0.03);
+  --accent-tint: #2c2736;
   --border: #393948;
   --text: #efe4da;
   --text-muted: #9d99b1;
@@ -166,6 +172,7 @@ html[data-palette="beacon"] {
   --surface: #f1f2f3;
   --sidebar-bg: #e6e8e9;
   --surface-subtle: rgba(0,0,0,0.03);
+  --accent-tint: #dcd8d6;
   --border: #c9ccce;
   --text: #1d2330;
   --text-muted: #535a64;
@@ -192,6 +199,7 @@ html[data-palette="beacon"][data-theme="dark"] {
   --surface: #252930;
   --sidebar-bg: #14171d;
   --surface-subtle: rgba(255,255,255,0.03);
+  --accent-tint: #2b282a;
   --border: #34383f;
   --text: #d3d8dc;
   --text-muted: #959ca5;

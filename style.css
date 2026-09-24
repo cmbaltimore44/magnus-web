@@ -1258,7 +1258,7 @@ input, textarea, select, button {
 }
 
 .book-row-current {
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  background: var(--accent-tint, color-mix(in srgb, var(--accent) 8%, transparent));
   border-radius: 6px;
 }
 .book-row-current .book-row-title { color: var(--accent); }
