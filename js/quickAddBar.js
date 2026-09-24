@@ -1,17 +1,23 @@
 import * as tasksApi from './data/tasks.js';
 import * as categoriesApi from './data/categories.js';
 import * as listsApi from './data/lists.js';
+import * as booksApi from './data/books.js';
+import { addWantToRead } from './bookQuickAdd.js';
+import { refreshLibrary } from './views/library.js';
+import { hashSegments } from './hash.js';
 import { parseQuickAdd, describeQuickAdd, findList } from './quickAdd.js';
 import { isMissingSchema, SCHEMA_004_HINT } from './schema.js';
 import { showError, showToast } from './toast.js';
 import { notifyDataChanged, isTyping, anyModalOpen } from './events.js';
 
 // Quick add: one line → a new task (or, with "+groceries oat milk", an item
-// on a list), from any view (syntax in js/quickAdd.js).
+// on a list, or with "book: Piranesi by Susanna Clarke", a Want to Read
+// book), from any view (syntax in js/quickAdd.js).
 // On desktop it's a bar above every view; on phones a floating + opens it.
 
 const INBOX_MESSAGE = 'Journal inbox is only available in Magnus.';
 const LIST_USAGE = 'Type +list then the item, e.g. +groceries oat milk.';
+const BOOK_USAGE = 'Type book: then a title (and "by" the author), or an ISBN.';
 const MAX_STARRED = 3;
 
 let userId = null;
@@ -62,6 +68,10 @@ function renderPreview() {
     el.preview.classList.add('quickadd-preview-warn');
     return;
   }
+  if (parsed.book) {
+    el.preview.textContent = describeQuickAdd(parsed);
+    return;
+  }
   if (parsed.list != null) {
     if (listsMissing) {
       el.preview.textContent = `Lists need their database tables. ${SCHEMA_004_HINT}`;
@@ -88,6 +98,10 @@ async function handleSubmit(e) {
   const parsed = parseQuickAdd(text, categories);
   if (parsed.inbox != null) {
     showToast(INBOX_MESSAGE, { type: 'info' });
+    return;
+  }
+  if (parsed.book) {
+    await addBook(parsed.book);
     return;
   }
   if (parsed.list != null) {
@@ -158,6 +172,35 @@ async function addToList(parsed) {
     showToast(`Added “${parsed.text}” to ${list.name}.`, { type: 'success', duration: 2500 });
     if (el.form.classList.contains('open')) closeQuickAdd();
     notifyDataChanged('quickadd');
+  } catch (err) {
+    showError(err);
+  } finally {
+    busy = false;
+  }
+}
+
+// "book: Piranesi by Susanna Clarke" → saved to Want to Read straight away;
+// author/cover/ISBN are filled in from Open Library in the background when
+// there's one clear match (js/bookQuickAdd.js).
+async function addBook(fields) {
+  if (!fields.isbn && !fields.title) {
+    showToast(BOOK_USAGE, { type: 'info' });
+    return;
+  }
+  busy = true;
+  try {
+    const books = await booksApi.listBooks();
+    const { book, enriched } = await addWantToRead(userId, fields, books);
+    el.input.value = '';
+    renderPreview();
+    showToast(`Added “${book.title}” to Want to Read.`, { type: 'success', duration: 2500 });
+    if (el.form.classList.contains('open')) closeQuickAdd();
+    notifyDataChanged('quickadd');
+    enriched.then((updated) => {
+      if (!updated) return;
+      showToast(`Found details for “${updated.title}”.`, { type: 'success', duration: 2500 });
+      if (hashSegments()[0] === 'library') refreshLibrary();
+    });
   } catch (err) {
     showError(err);
   } finally {

@@ -19,6 +19,7 @@ const SHELL = [
   'manifest.webmanifest',
   'js/app.js',
   'js/auth.js',
+  'js/bookQuickAdd.js',
   'js/charts.js',
   'js/commands.js',
   'js/data/books.js',

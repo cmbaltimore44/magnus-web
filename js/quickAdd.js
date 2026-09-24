@@ -8,6 +8,8 @@ import { parseDateInput } from './dates.js';
 //     #home      category whose name starts with "home" (case-insensitive)
 //     *          starred
 //   "> some thought" goes to the journal inbox instead (Magnus only).
+//   "book: Piranesi by Susanna Clarke" (or "b: …") adds a Want to Read book;
+//   "book: 978-0141439549" adds one by ISBN (looked up on Open Library).
 //   "+groceries oat milk" adds "oat milk" to the list whose name starts with
 //   "groceries" (Lists, schema_004); an unknown list name is reported, not guessed.
 // Words that look like tokens but don't resolve (an unknown #tag, a date
@@ -21,6 +23,8 @@ const DATE_WORD = /^(today|tod|tomorrow|tom|mon|tue|wed|thu|fri|sat|sun|monday|t
 export function parseQuickAdd(text, categories = [], now = new Date()) {
   const raw = String(text || '').trim();
   if (raw.startsWith('>')) return { inbox: raw.slice(1).trim() };
+  const book = /^(?:book|b):\s*(.*)$/i.exec(raw);
+  if (book) return { book: parseBookText(book[1]) };
   // ("+3 call mom" is still a due date: list names start with a letter.)
   const toList = /^\+(?=$|\s|\p{L})(\S*)\s*(.*)$/u.exec(raw);
   if (toList) return { list: toList[1], text: toList[2].trim() };
@@ -61,6 +65,17 @@ export function parseQuickAdd(text, categories = [], now = new Date()) {
   return out;
 }
 
+// "Title by Author" → { title, author }; an ISBN → { isbn }. The last " by "
+// splits, so "Stand by Me by Stephen King" keeps its title.
+export function parseBookText(text) {
+  const t = String(text || '').trim();
+  const isbn = t.replace(/[\s-]/g, '').toUpperCase();
+  if (/^(\d{9}[\dX]|\d{13})$/.test(isbn)) return { isbn };
+  const at = t.toLowerCase().lastIndexOf(' by ');
+  if (at > 0) return { title: t.slice(0, at).trim(), author: t.slice(at + 4).trim() || null };
+  return { title: t, author: null };
+}
+
 // The list a "+name" quick add points at: exact name first, then prefix.
 export function findList(lists, name) {
   const n = String(name || '').toLowerCase();
@@ -71,6 +86,12 @@ export function findList(lists, name) {
 // One-line description of what a parse will create, for the preview line.
 export function describeQuickAdd(parsed, categories = [], lists = []) {
   if (parsed.inbox != null) return parsed.inbox ? `→ journal inbox: ${parsed.inbox}` : '→ journal inbox';
+  if (parsed.book) {
+    const b = parsed.book;
+    if (b.isbn) return `→ Want to Read: ISBN ${b.isbn} (looked up on Open Library)`;
+    if (!b.title) return 'book: Title by Author, or an ISBN → Want to Read';
+    return `→ Want to Read: ${b.title}${b.author ? ` — ${b.author}` : ''}`;
+  }
   if (parsed.list != null) {
     const list = findList(lists, parsed.list);
     if (!parsed.list) return '+list item → a list (e.g. +groceries oat milk)';

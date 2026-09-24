@@ -41,3 +41,48 @@ export async function lookupBooks(query, { fetchImpl = fetch, limit = 6 } = {}) 
     };
   });
 }
+
+// ---------- one clear match (background enrichment after a quick add) ----------
+
+export function normalizeTitle(t) {
+  return String(t || '')
+    .toLowerCase()
+    .split(':')[0]
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/^\s*(the|a|an)\s+/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// The candidate that surely is the book you meant, or null if it's unclear:
+// - the title must match (ignoring case, punctuation, subtitles and a
+//   leading "The/A/An");
+// - if you gave an author, their surname must appear;
+// - the matches must be one work: the top result's main author wrote at
+//   least two thirds of them (editions of the same book count together;
+//   a stray study guide or an unattributed edition doesn't block it).
+const primaryAuthor = (c) => String(c.author || '').split(',')[0].trim().toLowerCase();
+export function clearMatch({ title, author }, candidates) {
+  const want = normalizeTitle(title);
+  if (!want) return null;
+  let hits = candidates.filter((c) => normalizeTitle(c.title) === want && c.author);
+  if (author) {
+    const surname = author.trim().split(/\s+/).pop().toLowerCase();
+    hits = hits.filter((c) => String(c.author).toLowerCase().includes(surname));
+  }
+  if (!hits.length) return null;
+  const lead = primaryAuthor(hits[0]);
+  const same = hits.filter((c) => primaryAuthor(c) === lead);
+  if (same.length * 3 < hits.length * 2) return null;
+  const pick = same.find((c) => c.cover_image_url) || same[0];
+  return { ...pick, author: pick.author.split(',')[0].trim() };
+}
+
+// Fields to fill on a quick-added book from a match: only what's missing.
+export function enrichmentFields(book, match) {
+  const out = {};
+  if (!book.author && match.author) out.author = match.author;
+  if (!book.cover_image_url && match.cover_image_url) out.cover_image_url = match.cover_image_url;
+  if (!book.isbn && match.isbn) out.isbn = match.isbn;
+  return out;
+}
