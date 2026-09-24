@@ -76,6 +76,7 @@ function renderHeader() {
   el.dateInput.max = today;
   el.nextBtn.disabled = date >= today;
   el.todayBtn.disabled = date === today;
+  el.weightLabel.textContent = `Weight (${getWeightUnit()})`;
   const label = new Date(date + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
   el.dateLabel.textContent = date === today ? `Today · ${label}` : label;
 }
@@ -99,7 +100,6 @@ function renderScale(container, metric) {
 }
 
 function renderForm() {
-  el.weightLabel.textContent = `Weight (${getWeightUnit()})`;
   el.sleep.value = formatNumber(dayValue(date, 'sleep'));
   el.weight.value = formatNumber(dayValue(date, 'weight'));
   scaleValue.mood = dayValue(date, 'mood');

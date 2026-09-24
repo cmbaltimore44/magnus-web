@@ -2250,3 +2250,9 @@ input, textarea, select, button {
   .log-date-input { flex: 1; min-width: 0; }
   .log-history th, .log-history td { padding-left: 5px; padding-right: 5px; }
 }
+
+/* ---------- settings ---------- */
+
+.settings-body > .field { max-width: 360px; }
+.settings-body > .stat-note { max-width: 480px; }
+.segmented-btn { width: auto; min-width: 56px; padding: 0 12px; font-family: var(--font-sans); }

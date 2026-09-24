@@ -55,6 +55,7 @@
         <button class="nav-item" data-view="library">Library</button>
         <button class="nav-item" data-view="log">Log</button>
         <button class="nav-item" data-view="insights">Insights</button>
+        <button class="nav-item" data-view="settings">Settings</button>
       </nav>
       <div class="sidebar-footer">
         <select id="palette-select" class="palette-select" title="Color theme" aria-label="Color theme"></select>
@@ -496,6 +497,39 @@
           </div>
         </header>
         <div class="detail-scroll stats-body" id="insights-body"></div>
+      </section>
+
+      <!-- Settings view -->
+      <section class="view" id="view-settings" hidden>
+        <header class="topbar">
+          <div class="topbar-title">
+            <h1>Settings</h1>
+            <span class="subtitle">This device</span>
+          </div>
+        </header>
+        <div class="detail-scroll stats-body settings-body">
+          <label class="field">
+            <span>Color theme</span>
+            <select id="settings-palette"></select>
+          </label>
+          <div class="field">
+            <span>Light / dark</span>
+            <div class="scale segmented" id="settings-mode" role="group" aria-label="Light or dark"></div>
+          </div>
+          <label class="field">
+            <span>Focus session length (minutes)</span>
+            <input type="number" id="settings-focus" min="1" max="180" step="1" inputmode="numeric" />
+          </label>
+          <div class="field">
+            <span>Weight unit (Log)</span>
+            <div class="scale segmented" id="settings-weight-unit" role="group" aria-label="Weight unit"></div>
+          </div>
+          <label class="field">
+            <span>Start view</span>
+            <select id="settings-start-view"></select>
+          </label>
+          <p class="stat-note">Saved on this device only. The start view is used when the app opens without a page in the address (e.g. from the home screen).</p>
+        </div>
       </section>
     </div>
   </div>

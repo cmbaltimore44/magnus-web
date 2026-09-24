@@ -42,3 +42,25 @@ export function getWeightUnit() {
 export function setWeightUnit(unit) {
   write(WEIGHT_UNIT_KEY, unit);
 }
+
+const START_VIEW_KEY = 'kanban.startView';
+export const START_VIEWS = [
+  ['today', 'Today'],
+  ['upcoming', 'Upcoming'],
+  ['board', 'Board'],
+  ['routines', 'Routines'],
+  ['projects', 'Projects'],
+  ['library', 'Library'],
+  ['log', 'Log'],
+  ['insights', 'Insights'],
+];
+
+// The view shown when the app opens without a #/view in the URL.
+export function getStartView() {
+  const view = read(START_VIEW_KEY);
+  return START_VIEWS.some(([key]) => key === view) ? view : 'today';
+}
+
+export function setStartView(view) {
+  write(START_VIEW_KEY, view);
+}

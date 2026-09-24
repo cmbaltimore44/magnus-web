@@ -56,6 +56,7 @@ function staticCommands() {
     },
     ...PALETTES.map((p) => ({ label: `Theme: ${p.label}`, run: () => setPalette(p.key) })),
     ...MODES.map((m) => ({ label: `Light/dark: ${MODE_LABELS[m]}`, run: () => setMode(m) })),
+    { label: 'Open settings', run: go('#/settings') },
     { label: 'Sign out', run: () => document.getElementById('sign-out-btn').click() },
   ];
   if (isFocusRunning()) list.unshift({ label: 'Stop focus timer', run: stopFocus });
