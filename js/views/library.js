@@ -8,6 +8,8 @@ import { lookupBooks, normalizeIsbn } from '../openLibrary.js';
 import { bookStats } from '../stats.js';
 import { todayISO } from '../dates.js';
 import { statTiles, section, barList } from '../charts.js';
+import { addWantToRead, needsDetails, nextWantOrder } from '../bookQuickAdd.js';
+import { parseBookText } from '../quickAdd.js';
 
 const BOOK_GROUPS = [
   { key: 'reading', label: 'Currently Reading', collapsible: false },
@@ -51,6 +53,14 @@ let quoteContext = 'standalone'; // 'book' | 'standalone'
 let quoteLockedBookId = null;
 let favoritesOnly = false;
 
+// Want to Read (#/library/want)
+const UP_NEXT = 3; // the first few are "Up next", the rest "Later"
+let wantFilter = '';
+const pendingWant = []; // rapid adds still waiting on the server, so their order holds
+let detailReturn = '#/library'; // where the book editor goes back to
+let lookupOnOpen = null; // book id: run the Open Library lookup once its editor opens
+let lookupFillMissing = false; // this lookup only fills what the book is missing
+
 const el = {};
 
 function cacheElements() {
@@ -60,6 +70,14 @@ function cacheElements() {
     quotesPanel: document.getElementById('library-quotes-panel'),
     statsPanel: document.getElementById('library-stats-panel'),
     stats: document.getElementById('library-stats'),
+
+    wantPanel: document.getElementById('library-want-panel'),
+    wantCount: document.getElementById('want-count'),
+    wantAddForm: document.getElementById('want-add-form'),
+    wantAddInput: document.getElementById('want-add-input'),
+    wantFilter: document.getElementById('want-filter'),
+    wantList: document.getElementById('want-list'),
+    backLink: document.getElementById('book-back-link'),
 
     booksList: document.getElementById('books-list'),
     bookCount: document.getElementById('book-count'),
@@ -184,12 +202,263 @@ function renderBooksList() {
 
 export async function handleNewBook() {
   try {
-    const created = await booksApi.createBook(userId, { title: 'Untitled Book', status: 'want_to_read' }, books.length);
+    const created = await booksApi.createBook(userId, { title: 'Untitled Book', status: 'want_to_read' }, nextWantOrder(books));
     books.unshift(created);
     location.hash = '#/library/books/' + created.id;
   } catch (err) {
     showError(err);
   }
+}
+
+// ---------- Want to Read ----------
+
+function byWantOrder(a, b) {
+  return (a.sort_order ?? 0) - (b.sort_order ?? 0) || String(a.created_at).localeCompare(String(b.created_at));
+}
+
+function wantBooks() {
+  return books.filter((b) => b.status === 'want_to_read').sort(byWantOrder);
+}
+
+function firstLine(text) {
+  return (
+    String(text || '')
+      .split('\n')
+      .map((line) => line.trim())
+      .find(Boolean) || ''
+  );
+}
+
+function matchesFilter(book, query) {
+  return [book.title, book.author, book.notes].some((v) => String(v || '').toLowerCase().includes(query));
+}
+
+function renderWantList() {
+  if (el.wantList.querySelector('.dragging')) return; // mid-drag: dragend re-renders
+  const all = wantBooks();
+  el.wantCount.textContent = all.length ? `${all.length} book${all.length === 1 ? '' : 's'}` : '';
+  el.wantList.innerHTML = '';
+
+  const query = wantFilter.trim().toLowerCase();
+  const shown = all.map((book, i) => ({ book, pos: i + 1 })).filter(({ book }) => !query || matchesFilter(book, query));
+  if (!shown.length) {
+    const hint = document.createElement('li');
+    hint.className = 'empty-hint';
+    hint.textContent = all.length ? `No books match “${wantFilter.trim()}”.` : 'Nothing here yet — add a book above.';
+    el.wantList.appendChild(hint);
+    return;
+  }
+
+  [
+    ['Up next', shown.filter((x) => x.pos <= UP_NEXT)],
+    ['Later', shown.filter((x) => x.pos > UP_NEXT)],
+  ].forEach(([label, rows]) => {
+    if (!rows.length) return;
+    const header = document.createElement('li');
+    header.className = 'checklist-header want-group-header';
+    const text = document.createElement('span');
+    text.className = 'meta-label';
+    text.textContent = label;
+    header.appendChild(text);
+    el.wantList.appendChild(header);
+    rows.forEach(({ book, pos }) => el.wantList.appendChild(renderWantRow(book, pos, all.length, !!query)));
+  });
+}
+
+function smallButton(className, text, label, onClick) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = className;
+  btn.textContent = text;
+  btn.title = label;
+  btn.setAttribute('aria-label', label);
+  btn.addEventListener('click', onClick);
+  return btn;
+}
+
+// One line: position, title, author and the first line of notes (muted).
+// While filtering, the order can't change (drag and arrows are off).
+function renderWantRow(book, pos, total, filtering) {
+  const row = document.createElement('li');
+  row.className = 'routine-row want-row';
+  row.dataset.id = book.id;
+  row.draggable = !filtering;
+
+  const num = document.createElement('span');
+  num.className = 'want-pos';
+  num.textContent = String(pos);
+  row.appendChild(num);
+
+  const main = document.createElement('span');
+  main.className = 'want-main';
+  const title = document.createElement('a');
+  title.className = 'want-title';
+  title.href = '#/library/books/' + book.id;
+  title.draggable = false;
+  title.textContent = book.title;
+  title.addEventListener('click', () => {
+    detailReturn = '#/library/want';
+  });
+  main.appendChild(title);
+  if (book.author) {
+    const author = document.createElement('span');
+    author.className = 'want-author';
+    author.textContent = book.author;
+    main.appendChild(author);
+  }
+  const note = firstLine(book.notes);
+  if (note) {
+    const noteEl = document.createElement('span');
+    noteEl.className = 'want-note';
+    noteEl.textContent = note;
+    main.appendChild(noteEl);
+  }
+  main.title = [book.title, book.author, note].filter(Boolean).join(' — ');
+  row.appendChild(main);
+
+  if (needsDetails(book)) {
+    row.appendChild(
+      smallButton('want-badge', '?', `Missing ${book.author ? 'a cover' : 'the author'}: look up “${book.title}” on Open Library`, () =>
+        openWithLookup(book.id)
+      )
+    );
+  }
+
+  if (!filtering) {
+    const up = smallButton('routine-remove want-move want-up', '↑', `Move “${book.title}” up`, () => moveWant(book.id, -1));
+    up.disabled = pos === 1;
+    const down = smallButton('routine-remove want-move want-down', '↓', `Move “${book.title}” down`, () => moveWant(book.id, 1));
+    down.disabled = pos === total;
+    row.append(up, down);
+  }
+  row.appendChild(smallButton('routine-remove want-remove', '×', `Delete “${book.title}”`, () => deleteWantBook(book)));
+
+  if (!filtering) {
+    row.addEventListener('dragstart', () => row.classList.add('dragging'));
+    row.addEventListener('dragend', () => {
+      row.classList.remove('dragging');
+      saveWantOrder(Array.from(el.wantList.querySelectorAll('.want-row')).map((r) => r.dataset.id));
+      renderWantList();
+    });
+  }
+  return row;
+}
+
+function wantRowAfter(y) {
+  const rows = Array.from(el.wantList.querySelectorAll('.want-row:not(.dragging)'));
+  return rows.find((row) => {
+    const rect = row.getBoundingClientRect();
+    return y - rect.top < rect.height / 2;
+  });
+}
+
+function wireWantDrag() {
+  el.wantList.addEventListener('dragover', (e) => {
+    const dragging = el.wantList.querySelector('.want-row.dragging');
+    if (!dragging) return;
+    e.preventDefault();
+    const after = wantRowAfter(e.clientY);
+    if (after) el.wantList.insertBefore(dragging, after);
+    else el.wantList.appendChild(dragging);
+  });
+}
+
+// Renumbers the Want to Read books 0…n-1 in this order; saves only the ones that moved.
+function saveWantOrder(ids) {
+  const changes = [];
+  ids.forEach((id, index) => {
+    const book = books.find((b) => b.id === id);
+    if (book && book.sort_order !== index) {
+      book.sort_order = index;
+      changes.push({ id, sort_order: index });
+    }
+  });
+  if (!changes.length) return;
+  booksApi.setSortOrders(changes).catch((err) => {
+    showError(err);
+    refreshLibrary();
+  });
+}
+
+// The up/down buttons: drag is unreliable on iPhone.
+function moveWant(id, delta) {
+  const order = wantBooks().map((b) => b.id);
+  const i = order.indexOf(id);
+  const j = i + delta;
+  if (i < 0 || j < 0 || j >= order.length) return;
+  [order[i], order[j]] = [order[j], order[i]];
+  saveWantOrder(order);
+  renderWantList();
+  // Keep focus on the arrow so it can be tapped again (or its twin, at the end).
+  const row = el.wantList.querySelector(`.want-row[data-id="${CSS.escape(id)}"]`);
+  const again = row?.querySelector(delta < 0 ? '.want-up' : '.want-down');
+  (again && !again.disabled ? again : row?.querySelector(delta < 0 ? '.want-down' : '.want-up'))?.focus();
+}
+
+function upsertBook(book) {
+  const index = books.findIndex((b) => b.id === book.id);
+  if (index >= 0) books[index] = book;
+  else books.unshift(book);
+}
+
+function renderBookLists() {
+  renderBooksList();
+  renderWantList();
+}
+
+// The add box: "Title by Author" or an ISBN, Enter, and straight on to the next.
+async function handleWantAdd(e) {
+  e.preventDefault();
+  const text = el.wantAddInput.value.trim();
+  if (!text) return;
+  const fields = parseBookText(text);
+  el.wantAddInput.value = '';
+  el.wantAddInput.focus();
+
+  const others = [...books, ...pendingWant];
+  const placeholder = { status: 'want_to_read', sort_order: nextWantOrder(others) };
+  pendingWant.push(placeholder);
+  try {
+    const { book, enriched } = await addWantToRead(userId, fields, others);
+    upsertBook(book);
+    renderBookLists();
+    showToast(`Added “${book.title}” to Want to Read.`, { type: 'success', duration: 2500 });
+    enriched.then((updated) => {
+      if (!updated) return;
+      upsertBook(updated);
+      renderBookLists();
+      showToast(`Found details for “${updated.title}”.`, { type: 'success', duration: 2500 });
+    });
+  } catch (err) {
+    showError(err);
+    if (!el.wantAddInput.value) el.wantAddInput.value = text; // nothing typed is lost
+  } finally {
+    pendingWant.splice(pendingWant.indexOf(placeholder), 1);
+  }
+}
+
+async function deleteWantBook(book) {
+  try {
+    await deleteWithUndo({
+      message: `Deleted “${book.title}”.`,
+      table: 'books',
+      id: book.id,
+      del: () => booksApi.deleteBook(book.id),
+      cascades: [{ table: 'quotes', column: 'book_id' }],
+    });
+    books = books.filter((b) => b.id !== book.id);
+    renderBookLists();
+  } catch (err) {
+    showError(err);
+  }
+}
+
+// The "?" badge: open the book and run the Open Library lookup, which then
+// only fills in what's missing.
+function openWithLookup(id) {
+  detailReturn = '#/library/want';
+  lookupOnOpen = id;
+  location.hash = '#/library/books/' + id;
 }
 
 // ---------- book detail ----------
@@ -220,12 +489,21 @@ async function openBookDetail(id) {
   el.notes.value = book.notes || '';
   clearLookup();
   renderHighlights();
+  if (lookupOnOpen === id) {
+    lookupOnOpen = null;
+    handleLookup({ fillMissing: true });
+  }
 }
 
 // ---------- Open Library lookup ----------
 
 const PLACEHOLDER_TITLE = 'Untitled Book';
 let lookupSeq = 0;
+
+// "Untitled Book", or "ISBN …" from an ISBN quick add that Open Library didn't know.
+function isPlaceholderTitle(title) {
+  return !title || title === PLACEHOLDER_TITLE || /^ISBN [\dX]{10,13}$/.test(title);
+}
 
 function clearLookup() {
   lookupSeq++;
@@ -242,9 +520,10 @@ function lookupMessage(text) {
   el.lookupResults.appendChild(hint);
 }
 
-async function handleLookup() {
+async function handleLookup({ fillMissing = false } = {}) {
+  lookupFillMissing = fillMissing;
   const isbn = normalizeIsbn(el.isbn.value);
-  const title = el.title.value.trim() === PLACEHOLDER_TITLE ? '' : el.title.value.trim();
+  const title = isPlaceholderTitle(el.title.value.trim()) ? '' : el.title.value.trim();
   const query = isbn || [title, el.author.value.trim()].filter(Boolean).join(' ');
   if (!query) {
     lookupMessage('Type an ISBN, or a title (and author), first.');
@@ -297,13 +576,14 @@ function renderLookupResult(result) {
   return row;
 }
 
-// Fills the empty fields (a typed title/author wins) plus cover and ISBN.
+// Fills the empty fields (a typed title/author wins) plus cover and ISBN —
+// or, from the Want to Read "?" badge, only the empty fields.
 function applyLookup(result) {
   const title = el.title.value.trim();
-  if ((!title || title === PLACEHOLDER_TITLE) && result.title) el.title.value = result.title;
+  if (isPlaceholderTitle(title) && result.title) el.title.value = result.title;
   if (!el.author.value.trim() && result.author) el.author.value = result.author;
-  if (result.isbn) el.isbn.value = result.isbn;
-  if (result.cover_image_url) {
+  if (result.isbn && !(lookupFillMissing && el.isbn.value.trim())) el.isbn.value = result.isbn;
+  if (result.cover_image_url && !(lookupFillMissing && el.coverUrl.value.trim())) {
     el.coverUrl.value = result.cover_image_url;
     el.cover.src = result.cover_image_url;
   }
@@ -329,8 +609,8 @@ async function handleSaveBook() {
     const updated = await booksApi.updateBook(currentBookId, fields);
     const index = books.findIndex((b) => b.id === currentBookId);
     if (index >= 0) books[index] = updated;
-    renderBooksList();
-    location.hash = '#/library';
+    renderBookLists();
+    location.hash = detailReturn;
   } catch (err) {
     showError(err);
   }
@@ -349,7 +629,7 @@ function handleDeleteBook() {
         cascades: [{ table: 'quotes', column: 'book_id' }],
       });
       books = books.filter((b) => b.id !== id);
-      location.hash = '#/library';
+      location.hash = detailReturn;
     } catch (err) {
       showError(err);
     }
@@ -622,22 +902,30 @@ function updateTabActive(tab) {
 
 function renderRoute() {
   const segments = hashSegments(); // ['library', ...]
-  if (segments[0] !== 'library') return;
+  if (segments[0] !== 'library') {
+    detailReturn = '#/library';
+    return;
+  }
   const sub = segments[1];
   const id = segments[2];
 
   el.booksPanel.hidden = !!sub;
+  el.wantPanel.hidden = sub !== 'want';
   el.bookDetailPanel.hidden = !(sub === 'books' && id);
   el.quotesPanel.hidden = sub !== 'quotes';
   el.statsPanel.hidden = sub !== 'stats';
 
-  updateTabActive(sub === 'quotes' || sub === 'stats' ? sub : 'books');
+  updateTabActive(['want', 'quotes', 'stats'].includes(sub) ? sub : 'books');
   if (sub === 'stats') renderStats();
+  if (sub === 'want') renderWantList();
 
   if (sub === 'books' && id) {
+    el.backLink.href = detailReturn;
+    el.backLink.textContent = detailReturn === '#/library/want' ? '← Back to Want to Read' : '← Back to Library';
     openBookDetail(id);
   } else {
     currentBookId = null;
+    detailReturn = sub === 'want' ? '#/library/want' : '#/library';
     if (!sub) renderBooksList();
   }
   if (sub === 'quotes') {
@@ -660,7 +948,20 @@ export async function initLibrary(uid) {
   el.newBookBtn.addEventListener('click', handleNewBook);
   el.saveBookBtn.addEventListener('click', handleSaveBook);
   el.deleteBookBtn.addEventListener('click', handleDeleteBook);
-  el.lookupBtn.addEventListener('click', handleLookup);
+  el.lookupBtn.addEventListener('click', () => handleLookup());
+  el.wantAddForm.addEventListener('submit', handleWantAdd);
+  el.wantFilter.addEventListener('input', () => {
+    wantFilter = el.wantFilter.value;
+    renderWantList();
+  });
+  el.wantFilter.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && el.wantFilter.value) {
+      e.stopPropagation();
+      el.wantFilter.value = wantFilter = '';
+      renderWantList();
+    }
+  });
+  wireWantDrag();
   el.coverUrl.addEventListener('input', () => {
     el.cover.src = el.coverUrl.value.trim();
   });
@@ -698,7 +999,7 @@ export async function refreshLibrary() {
     showError(err);
     return;
   }
-  renderBooksList();
+  renderBookLists();
   const segments = hashSegments();
   if (segments[0] !== 'library') return;
   if (segments[1] === 'stats') renderStats();

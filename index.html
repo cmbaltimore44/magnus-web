@@ -356,6 +356,7 @@
             <div class="topbar-controls">
               <div class="library-tabs">
                 <a href="#/library" class="tab-link" data-tab="books">Books</a>
+                <a href="#/library/want" class="tab-link" data-tab="want">Want to Read</a>
                 <a href="#/library/quotes" class="tab-link" data-tab="quotes">Quotes</a>
                 <a href="#/library/stats" class="tab-link" data-tab="stats">Stats</a>
               </div>
@@ -365,9 +366,34 @@
           <div class="flat-list" id="books-list"></div>
         </div>
 
+        <div id="library-want-panel" hidden>
+          <header class="topbar">
+            <div class="topbar-title">
+              <h1>Want to Read</h1>
+              <span class="subtitle" id="want-count"></span>
+            </div>
+            <div class="topbar-controls">
+              <div class="library-tabs">
+                <a href="#/library" class="tab-link" data-tab="books">Books</a>
+                <a href="#/library/want" class="tab-link active" data-tab="want">Want to Read</a>
+                <a href="#/library/quotes" class="tab-link" data-tab="quotes">Quotes</a>
+                <a href="#/library/stats" class="tab-link" data-tab="stats">Stats</a>
+              </div>
+            </div>
+          </header>
+          <div class="flat-list want-body">
+            <form class="routine-add-form want-add-form" id="want-add-form" autocomplete="off">
+              <input type="text" id="want-add-input" placeholder="Title by Author, or an ISBN" aria-label="Add a book to Want to Read" enterkeyhint="enter" />
+              <button type="submit" class="btn btn-ghost">Add</button>
+            </form>
+            <input type="search" id="want-filter" class="want-filter" placeholder="Filter by title, author or notes" aria-label="Filter Want to Read" autocomplete="off" />
+            <ul class="routine-list want-list" id="want-list" aria-label="Want to Read"></ul>
+          </div>
+        </div>
+
         <div id="library-book-detail-panel" hidden>
           <header class="topbar">
-            <a href="#/library" class="back-link">&larr; Back to Library</a>
+            <a href="#/library" class="back-link" id="book-back-link">&larr; Back to Library</a>
           </header>
           <div class="detail-scroll">
           <div class="book-detail-layout">
@@ -468,6 +494,7 @@
             <div class="topbar-controls">
               <div class="library-tabs">
                 <a href="#/library" class="tab-link" data-tab="books">Books</a>
+                <a href="#/library/want" class="tab-link" data-tab="want">Want to Read</a>
                 <a href="#/library/quotes" class="tab-link active" data-tab="quotes">Quotes</a>
                 <a href="#/library/stats" class="tab-link" data-tab="stats">Stats</a>
               </div>
@@ -489,6 +516,7 @@
             <div class="topbar-controls">
               <div class="library-tabs">
                 <a href="#/library" class="tab-link" data-tab="books">Books</a>
+                <a href="#/library/want" class="tab-link" data-tab="want">Want to Read</a>
                 <a href="#/library/quotes" class="tab-link" data-tab="quotes">Quotes</a>
                 <a href="#/library/stats" class="tab-link active" data-tab="stats">Stats</a>
               </div>

@@ -1084,6 +1084,7 @@ input, textarea, select, button {
 #projects-list-panel,
 #projects-detail-panel,
 #library-books-panel,
+#library-want-panel,
 #library-book-detail-panel,
 #library-quotes-panel,
 #library-stats-panel {
@@ -2454,4 +2455,78 @@ input, textarea, select, button {
   .lists-index-row { padding: 12px 8px; }
   .lists-item-row { padding: 10px 2px; }
   .lists-add-form input, .lists-rename-form input, .lists-item-editor input { font-size: 16px; } /* no iOS zoom-on-focus */
+}
+
+/* Library: Want to Read (one compact line per book) */
+.want-body > * { max-width: 760px; }
+.want-add-form { margin: 4px 0 8px 0; }
+.want-filter {
+  padding: 7px 9px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+  min-width: 0;
+}
+.want-filter:focus { border-color: var(--accent); }
+.want-filter::placeholder,
+.want-add-form input::placeholder { color: var(--text-muted); }
+.want-group-header { margin: 16px 0 2px 0; }
+.want-row { gap: 8px; padding: 6px 2px; }
+.want-pos {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  min-width: 2ch;
+  text-align: right;
+  flex-shrink: 0;
+}
+.want-main {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.want-title {
+  color: var(--text);
+  font-weight: 550;
+  text-decoration: none;
+}
+.want-title:hover { text-decoration: underline; }
+.want-author,
+.want-note {
+  margin-left: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.want-note { font-style: italic; }
+.want-badge {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.want-badge:hover { background: var(--hover-bg); }
+.want-move { font-size: 14px; padding: 2px 4px; }
+.want-move:disabled { visibility: hidden; }
+.want-move:hover { color: var(--text); }
+
+@media (max-width: 720px) {
+  .want-body { padding-bottom: 120px; } /* clear of the floating buttons */
+  .want-row { padding: 4px 2px; gap: 4px; }
+  .want-row .routine-remove { min-width: 34px; min-height: 36px; }
+  .want-badge { width: 26px; height: 26px; margin: 0 4px; }
+  .want-add-form input, .want-filter { font-size: 16px; } /* no iOS zoom-on-focus */
 }
