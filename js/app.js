@@ -6,6 +6,7 @@ import { initBoard, refreshBoard } from './views/board.js';
 import { initRoutines, refreshRoutines } from './views/routines.js';
 import { initProjects, refreshProjects } from './views/projects.js';
 import { initLibrary, refreshLibrary } from './views/library.js';
+import { initUpcoming, refreshUpcoming } from './views/upcoming.js';
 import { initSearch } from './search.js';
 import { initVoiceInput } from './voiceInput.js';
 import { initQuickAdd } from './quickAddBar.js';
@@ -67,10 +68,14 @@ document.getElementById('sign-out-btn').addEventListener('click', async () => {
 
 // ---------- routing ----------
 
-const VIEW_IDS = ['today', 'board', 'routines', 'projects', 'library'];
+const VIEW_IDS = ['today', 'upcoming', 'board', 'routines', 'projects', 'library'];
+
+// Views that only load their data when shown.
+const LAZY_VIEWS = ['upcoming'];
 
 const REFRESH = {
   today: refreshToday,
+  upcoming: refreshUpcoming,
   board: refreshBoard,
   routines: refreshRoutines,
   projects: refreshProjects,
@@ -89,6 +94,8 @@ function setActiveView(view) {
   document.querySelectorAll('.nav-item').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.view === view);
   });
+  // On phones the nav is a horizontally scrolling bar; keep the active item in view.
+  document.querySelector(`.nav-item[data-view="${view}"]`)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 
 function initRouter() {
@@ -145,7 +152,9 @@ async function enterApp(session) {
     initRoutines(uid),
     initProjects(uid),
     initLibrary(uid),
+    initUpcoming(uid),
   ]);
+  if (LAZY_VIEWS.includes(currentView())) REFRESH[currentView()]();
   initSearch();
   initVoiceInput();
   initQuickAdd(uid);

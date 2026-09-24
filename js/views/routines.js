@@ -1,6 +1,7 @@
 import * as routinesApi from '../data/routines.js';
 import * as completionsApi from '../data/completions.js';
-import { showError, showToast } from '../toast.js';
+import { showError } from '../toast.js';
+import { deleteWithUndo } from '../undo.js';
 
 const GROUPS = ['morning', 'afternoon', 'evening'];
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -191,11 +192,16 @@ async function toggleCompletion(routine, checked) {
 
 async function removeRoutine(id) {
   try {
-    await routinesApi.deleteRoutine(id);
+    await deleteWithUndo({
+      message: 'Routine deleted.',
+      table: 'routines',
+      id,
+      del: () => routinesApi.deleteRoutine(id),
+      cascades: [{ table: 'routine_completions', column: 'routine_id' }],
+    });
     routines = routines.filter((r) => r.id !== id);
     completions.delete(id);
     renderAll();
-    showToast('Routine deleted.', { type: 'success' });
   } catch (err) {
     showError(err);
   }

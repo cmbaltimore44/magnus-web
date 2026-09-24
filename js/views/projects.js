@@ -1,8 +1,9 @@
 import * as projectsApi from '../data/projects.js';
 import * as projectTasksApi from '../data/projectTasks.js';
 import { hashSegments } from '../hash.js';
-import { showError, showToast } from '../toast.js';
+import { showError } from '../toast.js';
 import { dueStatus, formatDue } from '../taskDisplay.js';
+import { deleteWithUndo } from '../undo.js';
 
 const STATUS_LABELS = { not_started: 'Not Started', in_progress: 'In Progress', done: 'Done' };
 
@@ -157,11 +158,21 @@ function renderChecklist() {
     remove.type = 'button';
     remove.textContent = '×';
     remove.addEventListener('click', async () => {
+      const projectId = currentProjectId;
       try {
-        await projectTasksApi.deleteProjectTask(item.id);
+        await deleteWithUndo({
+          message: 'Checklist item deleted.',
+          table: 'project_tasks',
+          id: item.id,
+          del: () => projectTasksApi.deleteProjectTask(item.id),
+          onRestored: async () => {
+            if (currentProjectId !== projectId) return;
+            checklist = await projectTasksApi.listProjectTasks(projectId);
+            renderChecklist();
+          },
+        });
         checklist = checklist.filter((c) => c.id !== item.id);
         renderChecklist();
-        showToast('Checklist item deleted.', { type: 'success' });
       } catch (err) {
         showError(err);
       }
@@ -231,11 +242,17 @@ async function handleSave() {
 
 async function handleDelete() {
   if (!currentProjectId) return;
+  const id = currentProjectId;
   try {
-    await projectsApi.deleteProject(currentProjectId);
-    projects = projects.filter((p) => p.id !== currentProjectId);
+    await deleteWithUndo({
+      message: 'Project deleted.',
+      table: 'projects',
+      id,
+      del: () => projectsApi.deleteProject(id),
+      cascades: [{ table: 'project_tasks', column: 'project_id' }],
+    });
+    projects = projects.filter((p) => p.id !== id);
     location.hash = '#/projects';
-    showToast('Project deleted.', { type: 'success' });
   } catch (err) {
     showError(err);
   }

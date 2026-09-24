@@ -3,6 +3,8 @@ import * as categoriesApi from '../data/categories.js';
 import { getCategory as getCategoryFrom, dueStatus, formatDue } from '../taskDisplay.js';
 import { showError, showToast } from '../toast.js';
 import { stopVoiceInput } from '../voiceInput.js';
+import { deleteWithUndo } from '../undo.js';
+import { notifyDataChanged } from '../events.js';
 
 const COLORS = [
   '#bf5433', '#c9463f', '#b8791a', '#2fa84f',
@@ -296,6 +298,7 @@ async function handleTaskSubmit(e) {
     }
     renderBoard();
     closeTaskModal();
+    notifyDataChanged('board');
   } catch (err) {
     showError(err);
   }
@@ -303,12 +306,19 @@ async function handleTaskSubmit(e) {
 
 async function handleTaskDelete() {
   if (!editingTaskId) return;
+  const id = editingTaskId;
   try {
-    await tasksApi.deleteTask(editingTaskId);
-    tasks = tasks.filter((t) => t.id !== editingTaskId);
+    await deleteWithUndo({
+      message: 'Task deleted.',
+      table: 'tasks',
+      id,
+      del: () => tasksApi.deleteTask(id),
+      relinks: [{ table: 'focus_sessions', column: 'task_id' }],
+    });
+    tasks = tasks.filter((t) => t.id !== id);
     renderBoard();
     closeTaskModal();
-    showToast('Task deleted.', { type: 'success' });
+    notifyDataChanged('board');
   } catch (err) {
     showError(err);
   }
@@ -397,7 +407,13 @@ function renderCategoryManagerList() {
     remove.title = 'Remove category';
     remove.addEventListener('click', async () => {
       try {
-        await categoriesApi.deleteCategory(c.id);
+        await deleteWithUndo({
+          message: 'Category deleted.',
+          table: 'categories',
+          id: c.id,
+          del: () => categoriesApi.deleteCategory(c.id),
+          relinks: [{ table: 'tasks', column: 'category_id' }],
+        });
         categories = categories.filter((x) => x.id !== c.id);
         tasks.forEach((t) => {
           if (t.category_id === c.id) t.category_id = null;
@@ -406,7 +422,6 @@ function renderCategoryManagerList() {
         renderCategoryFilterOptions();
         renderTaskCategoryOptions();
         renderBoard();
-        showToast('Category deleted.', { type: 'success' });
       } catch (err) {
         showError(err);
       }
@@ -560,4 +575,5 @@ export async function refreshBoard() {
   renderCategoryFilterOptions();
   renderTaskCategoryOptions();
   renderBoard();
+  if (el.categoryModalOverlay.classList.contains('open')) renderCategoryManagerList();
 }

@@ -1458,7 +1458,15 @@ input, textarea, select, button {
   .sidebar-nav {
     flex-direction: row;
     flex: none;
-    justify-content: space-around;
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .sidebar-nav::-webkit-scrollbar { display: none; }
+
+  .nav-item {
+    flex: 1 0 auto;
+    justify-content: center;
   }
 
   .sidebar-footer {
@@ -1823,6 +1831,9 @@ input, textarea, select, button {
   .quickadd.open { display: block; }
   .quickadd-row input { font-size: 16px; } /* no iOS zoom-on-focus */
 
+  /* (the base .search-fab rule comes later in the file and won this) */
+  .search-fab { bottom: calc(90px + env(safe-area-inset-bottom, 0px)); }
+
   .quickadd-fab {
     display: flex;
     position: fixed;
@@ -1842,4 +1853,42 @@ input, textarea, select, button {
     cursor: pointer;
     box-shadow: var(--toast-shadow);
   }
+}
+
+.toast.toast-action { align-items: center; }
+.toast-action-btn { flex: none; }
+
+/* ---------- upcoming ---------- */
+
+.upcoming-list > * { max-width: 760px; width: 100%; }
+.upcoming-group-header:first-child { margin-top: 4px; }
+.meta-label.upcoming-overdue { color: var(--overdue); }
+
+.upcoming-row {
+  display: grid;
+  grid-template-columns: 15px 52px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 3px;
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.upcoming-row:hover { background: var(--hover-bg); }
+.upcoming-row .routine-check { margin: 0; }
+
+.upcoming-title {
+  min-width: 0;
+  font-weight: 550;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upcoming-meta { flex-wrap: nowrap; }
+
+@media (max-width: 720px) {
+  .upcoming-row { grid-template-columns: 15px 52px minmax(0, 1fr); }
+  .upcoming-title { white-space: normal; }
+  .upcoming-meta { grid-column: 3; }
 }

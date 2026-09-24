@@ -1,8 +1,9 @@
 import * as booksApi from '../data/books.js';
 import * as quotesApi from '../data/quotes.js';
 import { hashSegments } from '../hash.js';
-import { showError, showToast, showConfirmToast } from '../toast.js';
+import { showError, showConfirmToast } from '../toast.js';
 import { stopVoiceInput } from '../voiceInput.js';
+import { deleteWithUndo } from '../undo.js';
 
 const BOOK_GROUPS = [
   { key: 'reading', label: 'Currently Reading', collapsible: false },
@@ -239,12 +240,18 @@ async function handleSaveBook() {
 
 function handleDeleteBook() {
   if (!currentBookId) return;
-  showConfirmToast('Delete this book and all its highlights? This cannot be undone.', async () => {
+  const id = currentBookId;
+  showConfirmToast('Delete this book and all its highlights?', async () => {
     try {
-      await booksApi.deleteBook(currentBookId);
-      books = books.filter((b) => b.id !== currentBookId);
+      await deleteWithUndo({
+        message: 'Book deleted.',
+        table: 'books',
+        id,
+        del: () => booksApi.deleteBook(id),
+        cascades: [{ table: 'quotes', column: 'book_id' }],
+      });
+      books = books.filter((b) => b.id !== id);
       location.hash = '#/library';
-      showToast('Book deleted.', { type: 'success' });
     } catch (err) {
       showError(err);
     }
@@ -296,9 +303,8 @@ function renderQuoteRow(quote, context) {
     e.stopPropagation();
     showConfirmToast('Delete this quote?', async () => {
       try {
-        await quotesApi.deleteQuote(quote.id);
+        await deleteQuoteWithUndo(quote.id);
         await afterQuoteMutation();
-        showToast('Quote deleted.', { type: 'success' });
       } catch (err) {
         showError(err);
       }
@@ -356,6 +362,16 @@ export async function openQuoteResult(quoteId, bookId) {
     renderQuotesList();
     openQuoteModal({ quote: allQuotes.find((q) => q.id === quoteId), context: 'standalone' });
   }
+}
+
+function deleteQuoteWithUndo(id) {
+  return deleteWithUndo({
+    message: 'Quote deleted.',
+    table: 'quotes',
+    id,
+    del: () => quotesApi.deleteQuote(id),
+    onRestored: afterQuoteMutation,
+  });
 }
 
 async function afterQuoteMutation() {
@@ -442,12 +458,12 @@ async function handleQuoteSubmit(e) {
 
 function handleQuoteDelete() {
   if (!editingQuoteId) return;
+  const id = editingQuoteId;
   showConfirmToast('Delete this quote?', async () => {
     try {
-      await quotesApi.deleteQuote(editingQuoteId);
+      await deleteQuoteWithUndo(id);
       await afterQuoteMutation();
       closeQuoteModal();
-      showToast('Quote deleted.', { type: 'success' });
     } catch (err) {
       showError(err);
     }

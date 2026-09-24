@@ -48,6 +48,7 @@
       <div class="sidebar-brand">Life Tracker</div>
       <nav class="sidebar-nav">
         <button class="nav-item" data-view="today">Today</button>
+        <button class="nav-item" data-view="upcoming">Upcoming</button>
         <button class="nav-item" data-view="board">Board</button>
         <button class="nav-item" data-view="routines">Routines</button>
         <button class="nav-item" data-view="projects">Projects</button>
@@ -91,6 +92,17 @@
             <div class="routine-group-header"><h2>Routines</h2></div>
           </aside>
         </div>
+      </section>
+
+      <!-- Upcoming view -->
+      <section class="view" id="view-upcoming" hidden>
+        <header class="topbar">
+          <div class="topbar-title">
+            <h1>Upcoming</h1>
+            <span class="subtitle" id="upcoming-count"></span>
+          </div>
+        </header>
+        <div class="flat-list upcoming-list" id="upcoming-list"></div>
       </section>
 
       <!-- Board view -->
