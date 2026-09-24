@@ -56,6 +56,7 @@ Visit the deployed URL from your phone's browser and sign in with the same email
 | `index.html` | Sidebar shell, auth screen, all views (Today, Board, Routines, Projects, Library), global search overlay, and modals |
 | `style.css` | Theme variables (light/dark), layout, component styling, and mobile-specific responsive rules |
 | `js/app.js` | Entry point: auth gate, hash-based router, focus/visibility refresh, wires up search and voice input |
+| `js/phoneNav.js` | Phone-width navigation: bottom tab bar (4 sections, chosen in Settings) and the More sheet with live counts |
 | `js/supabaseClient.js` | Supabase client init — put your project URL/anon key here |
 | `js/auth.js` | Email OTP sign-in/out |
 | `js/theme.js` | Light/dark theme toggle |

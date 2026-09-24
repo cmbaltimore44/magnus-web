@@ -617,6 +617,11 @@
             <span>Weight unit (Log)</span>
             <div class="scale segmented" id="settings-weight-unit" role="group" aria-label="Weight unit"></div>
           </div>
+          <fieldset class="field phone-tabs-field">
+            <legend>Tab bar on phones (pick 4)</legend>
+            <div class="phone-tabs-options" id="settings-phone-tabs"></div>
+            <p class="stat-note" id="settings-phone-tabs-note" aria-live="polite"></p>
+          </fieldset>
           <label class="field">
             <span>Start view</span>
             <select id="settings-start-view"></select>
@@ -625,6 +630,9 @@
         </div>
       </section>
     </div>
+
+    <!-- Phone-width bottom tab bar (js/phoneNav.js); the sidebar is used above 720px -->
+    <nav class="phone-tabbar" id="phone-tabbar" aria-label="Sections"></nav>
   </div>
 
   <!-- Focus timer (shown while one is running) -->
@@ -645,6 +653,17 @@
       <input type="text" id="search-modal-input" class="search-modal-input" placeholder="Search, or type > for commands…" autocomplete="off" />
       <div class="search-hint" id="search-hint">↑↓ to navigate · ↵ to open · &gt; for commands · esc to close</div>
       <div id="search-results" class="search-results"></div>
+    </div>
+  </div>
+
+  <!-- Phone "More" sheet: every section not pinned to the tab bar -->
+  <div class="modal-overlay more-sheet-overlay" id="more-sheet-overlay">
+    <div class="more-sheet" id="more-sheet" role="dialog" aria-modal="true" aria-labelledby="more-sheet-title">
+      <div class="more-sheet-header">
+        <h2 id="more-sheet-title">More</h2>
+        <button type="button" class="icon-btn" id="more-sheet-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="more-sheet-grid" id="more-sheet-grid"></div>
     </div>
   </div>
 

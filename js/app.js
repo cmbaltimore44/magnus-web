@@ -19,6 +19,7 @@ import { onDataChanged, anyModalOpen } from './events.js';
 import { initLiveUpdates } from './live.js';
 import { setOfflineUser, isOffline, onOfflineChange, reportNetworkState, clearOfflineCache } from './offline.js';
 import { initFocus } from './focus.js';
+import { initPhoneNav, setPhoneNavActive } from './phoneNav.js';
 
 const authScreen = document.getElementById('auth-screen');
 const appShell = document.getElementById('app-shell');
@@ -107,11 +108,11 @@ function setActiveView(view) {
   document.querySelectorAll('.nav-item').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.view === view);
   });
-  // On phones the nav is a horizontally scrolling bar; keep the active item in view.
-  document.querySelector(`.nav-item[data-view="${view}"]`)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  setPhoneNavActive(view);
 }
 
 function initRouter() {
+  initPhoneNav();
   document.querySelectorAll('.nav-item').forEach((btn) => {
     btn.addEventListener('click', () => {
       location.hash = '#/' + btn.dataset.view;

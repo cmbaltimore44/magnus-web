@@ -1447,40 +1447,7 @@ input, textarea, select, button {
 @media (max-width: 720px) {
   .app-shell { flex-direction: column; }
 
-  .sidebar {
-    width: 100%;
-    flex-direction: column;
-    border-top: 1px solid var(--border);
-    order: 2;
-    padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px)) 8px;
-  }
-
-  .sidebar-brand { display: none; }
-
-  .sidebar-nav {
-    flex-direction: row;
-    flex: none;
-    justify-content: flex-start;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .sidebar-nav::-webkit-scrollbar { display: none; }
-
-  .nav-item {
-    flex: 1 0 auto;
-    justify-content: center;
-  }
-
-  .sidebar-footer {
-    margin-top: 4px;
-    flex-direction: row;
-    justify-content: center;
-    gap: 16px;
-  }
-
-  .sidebar-footer .btn, .sidebar-footer .icon-toggle-btn, .sidebar-footer .palette-select {
-    width: auto;
-  }
+  /* The sidebar is replaced by the bottom tab bar (phone navigation, below). */
 
   .content { order: 1; }
 
@@ -2534,3 +2501,170 @@ input, textarea, select, button {
 }
 
 .book-detail-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ---------- phone navigation (js/phoneNav.js) ---------- */
+/* Above 720px none of this shows: the sidebar is the navigation. */
+
+.phone-tabbar,
+.phone-tabs-field { display: none; }
+
+@media (min-width: 721px) {
+  .more-sheet-overlay.open { display: none; }
+}
+
+@media (max-width: 720px) {
+  .sidebar { display: none; }
+
+  .phone-tabbar {
+    order: 2;
+    flex-shrink: 0;
+    display: flex;
+    background: var(--sidebar-bg);
+    border-top: 1px solid var(--border);
+    padding: 4px 4px calc(4px + env(safe-area-inset-bottom, 0px)) 4px;
+    gap: 2px;
+  }
+
+  .tabbar-item {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 52px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 4px 2px;
+    border: none;
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .tabbar-item.active {
+    background: var(--hover-bg);
+    color: var(--text);
+    font-weight: 650;
+    box-shadow: inset 0 2px 0 var(--accent);
+  }
+  .tabbar-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .tabbar-icon { font-size: 19px; line-height: 1; }
+  .tabbar-label {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .more-sheet-overlay { z-index: 170; }
+  .more-sheet-overlay.open { align-items: flex-end; }
+
+  .more-sheet {
+    width: 100%;
+    max-height: 85vh;
+    max-height: 85dvh;
+    overflow-y: auto;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-radius: 10px 10px 0 0;
+    box-shadow: var(--modal-shadow);
+    padding: 12px 14px calc(16px + env(safe-area-inset-bottom, 0px)) 14px;
+    transform: translateY(100%);
+    transition: transform 0.22s ease;
+  }
+  .more-sheet-overlay.shown .more-sheet { transform: translateY(0); }
+
+  .more-sheet-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .more-sheet-header h2 {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: 18px;
+    font-weight: 500;
+  }
+  .more-sheet-header .icon-btn { min-width: 44px; min-height: 44px; font-size: 24px; }
+
+  .more-sheet-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .more-tile {
+    min-height: 88px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 3px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg);
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .more-tile:active { background: var(--hover-bg); }
+  .more-tile.active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .more-tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .more-tile-icon { font-size: 20px; line-height: 1; margin-bottom: 3px; }
+  .more-tile-label { font-size: 14px; font-weight: 600; }
+  .more-tile-count { font-size: 12px; color: var(--text-muted); line-height: 1.3; }
+  .more-tile-action { min-height: 64px; }
+
+  /* Settings → Tab bar on phones */
+  .phone-tabs-field {
+    display: flex;
+    border: none;
+    padding: 0;
+    margin: 0 0 12px 0;
+    min-width: 0;
+  }
+  .phone-tabs-field legend {
+    padding: 0;
+    margin-bottom: 5px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .phone-tabs-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 8px;
+  }
+  .phone-tab-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    cursor: pointer;
+  }
+  .phone-tab-option input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); }
+  .field .phone-tab-option span {
+    font-family: var(--font-sans);
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: normal;
+    text-transform: none;
+    color: var(--text);
+  }
+  .phone-tabs-field .stat-note { margin: 4px 0 0 0; }
+}
+
+@media (max-width: 720px) and (prefers-reduced-motion: reduce) {
+  .more-sheet { transition: none; }
+}

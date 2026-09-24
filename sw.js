@@ -43,6 +43,7 @@ const SHELL = [
   'js/offline.js',
   'js/openLibrary.js',
   'js/palettes.js',
+  'js/phoneNav.js',
   'js/quickAdd.js',
   'js/quickAddBar.js',
   'js/resilientFetch.js',

@@ -65,3 +65,32 @@ export function getStartView() {
 export function setStartView(view) {
   write(START_VIEW_KEY, view);
 }
+
+// Phone tab bar (js/phoneNav.js): the 4 sections pinned to the bottom bar on
+// phone-width screens; everything else is under "More". Settings always
+// lives in More, so it can't be pinned.
+const PHONE_TABS_KEY = 'kanban.phoneTabs';
+export const PHONE_TAB_COUNT = 4;
+export const DEFAULT_PHONE_TABS = ['today', 'upcoming', 'lists', 'library'];
+
+export function getPhoneTabs() {
+  try {
+    const tabs = JSON.parse(read(PHONE_TABS_KEY));
+    const valid = new Set(START_VIEWS.map(([key]) => key));
+    if (
+      Array.isArray(tabs) &&
+      tabs.length === PHONE_TAB_COUNT &&
+      new Set(tabs).size === PHONE_TAB_COUNT &&
+      tabs.every((t) => valid.has(t))
+    ) {
+      return tabs;
+    }
+  } catch {
+    // unreadable: fall back to the default
+  }
+  return [...DEFAULT_PHONE_TABS];
+}
+
+export function setPhoneTabs(tabs) {
+  write(PHONE_TABS_KEY, JSON.stringify(tabs));
+}
