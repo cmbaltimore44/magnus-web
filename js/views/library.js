@@ -5,6 +5,9 @@ import { showError, showToast, showConfirmToast } from '../toast.js';
 import { stopVoiceInput } from '../voiceInput.js';
 import { deleteWithUndo } from '../undo.js';
 import { lookupBooks, normalizeIsbn } from '../openLibrary.js';
+import { bookStats } from '../stats.js';
+import { todayISO } from '../dates.js';
+import { statTiles, section, barList } from '../charts.js';
 
 const BOOK_GROUPS = [
   { key: 'reading', label: 'Currently Reading', collapsible: false },
@@ -55,6 +58,8 @@ function cacheElements() {
     booksPanel: document.getElementById('library-books-panel'),
     bookDetailPanel: document.getElementById('library-book-detail-panel'),
     quotesPanel: document.getElementById('library-quotes-panel'),
+    statsPanel: document.getElementById('library-stats-panel'),
+    stats: document.getElementById('library-stats'),
 
     booksList: document.getElementById('books-list'),
     bookCount: document.getElementById('book-count'),
@@ -351,6 +356,52 @@ function handleDeleteBook() {
   });
 }
 
+// ---------- reading stats ----------
+
+const FORMAT_LABELS = { physical: 'Physical', ebook: 'Ebook', audiobook: 'Audiobook', unknown: 'Not set' };
+
+function renderStats() {
+  const s = bookStats(books, todayISO());
+  el.stats.innerHTML = '';
+  if (!books.length) {
+    const hint = document.createElement('div');
+    hint.className = 'empty-hint';
+    hint.textContent = 'No books yet — stats show up once you add some.';
+    el.stats.appendChild(hint);
+    return;
+  }
+  const rated = s.ratingCounts.reduce((a, b) => a + b, 0);
+  el.stats.append(
+    statTiles([
+      { label: `Finished in ${todayISO().slice(0, 4)}`, value: s.finishedThisYear },
+      { label: 'Finished in total', value: s.finished },
+      { label: 'Reading', value: s.reading },
+      { label: 'Want to read', value: s.wantToRead },
+      { label: 'Did not finish', value: s.dnf },
+      { label: 'Average rating', value: s.averageRating != null ? `${s.averageRating.toFixed(1)} / 5` : '—' },
+      { label: 'Average days to finish', value: s.averageDays ?? '—' },
+    ]),
+    section(
+      'Ratings',
+      rated
+        ? barList([5, 4, 3, 2, 1].map((n) => ({ label: `${n} ★`, value: s.ratingCounts[n - 1] })))
+        : 'No rated books yet.'
+    ),
+    section(
+      'Finished per year',
+      s.byYear.length ? barList(s.byYear.map(([year, n]) => ({ label: year, value: n }))) : 'Books with a finished date show up here.'
+    ),
+    section(
+      'Finished by format',
+      s.byFormat.length ? barList(s.byFormat.map(([f, n]) => ({ label: FORMAT_LABELS[f] || f, value: n }))) : 'No finished books yet.'
+    ),
+    section(
+      'Authors you keep reading',
+      s.topAuthors.length ? barList(s.topAuthors.map(([a, n]) => ({ label: a, value: n }))) : 'No author with more than one finished book yet.'
+    )
+  );
+}
+
 // ---------- quotes (shared between book highlights + standalone browser) ----------
 
 function renderQuoteRow(quote, context) {
@@ -578,8 +629,10 @@ function renderRoute() {
   el.booksPanel.hidden = !!sub;
   el.bookDetailPanel.hidden = !(sub === 'books' && id);
   el.quotesPanel.hidden = sub !== 'quotes';
+  el.statsPanel.hidden = sub !== 'stats';
 
-  updateTabActive(sub === 'quotes' ? 'quotes' : 'books');
+  updateTabActive(sub === 'quotes' || sub === 'stats' ? sub : 'books');
+  if (sub === 'stats') renderStats();
 
   if (sub === 'books' && id) {
     openBookDetail(id);
@@ -648,6 +701,7 @@ export async function refreshLibrary() {
   renderBooksList();
   const segments = hashSegments();
   if (segments[0] !== 'library') return;
+  if (segments[1] === 'stats') renderStats();
   if (segments[1] === 'books' && segments[2]) openBookDetail(segments[2]);
   if (segments[1] === 'quotes') {
     allQuotes = await quotesApi.listQuotes();

@@ -291,6 +291,7 @@
               <div class="library-tabs">
                 <a href="#/library" class="tab-link" data-tab="books">Books</a>
                 <a href="#/library/quotes" class="tab-link" data-tab="quotes">Quotes</a>
+                <a href="#/library/stats" class="tab-link" data-tab="stats">Stats</a>
               </div>
               <button id="new-book-btn" class="btn btn-primary">+ New Book</button>
             </div>
@@ -402,6 +403,7 @@
               <div class="library-tabs">
                 <a href="#/library" class="tab-link" data-tab="books">Books</a>
                 <a href="#/library/quotes" class="tab-link active" data-tab="quotes">Quotes</a>
+                <a href="#/library/stats" class="tab-link" data-tab="stats">Stats</a>
               </div>
               <label class="favorites-filter">
                 <input type="checkbox" id="quotes-favorites-filter" />
@@ -411,6 +413,22 @@
             </div>
           </header>
           <div class="quote-list flat-list" id="quotes-list"></div>
+        </div>
+
+        <div id="library-stats-panel" hidden>
+          <header class="topbar">
+            <div class="topbar-title">
+              <h1>Reading Stats</h1>
+            </div>
+            <div class="topbar-controls">
+              <div class="library-tabs">
+                <a href="#/library" class="tab-link" data-tab="books">Books</a>
+                <a href="#/library/quotes" class="tab-link" data-tab="quotes">Quotes</a>
+                <a href="#/library/stats" class="tab-link active" data-tab="stats">Stats</a>
+              </div>
+            </div>
+          </header>
+          <div class="detail-scroll stats-body" id="library-stats"></div>
         </div>
       </section>
     </div>
