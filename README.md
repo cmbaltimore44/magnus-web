@@ -92,5 +92,10 @@ Color themes (Hearth — the original Life Tracker palette — Heather, Lakeglow
 Magnus terminal app. `themes.css` and `js/palettes.js` are **generated** in
 the Magnus repo (`npm run themes:web`); don't edit them by hand.
 `js/theme-boot.js` applies the saved theme and light/dark mode (Auto follows
-the system setting) before first paint. The picker and toggle live in the
+the system setting) before first paint.
+It also swaps the app icon to match the theme. `icons/` (one set per theme)
+and `build/icon*` are drawn by `scripts/generate-icon.py` from `themes.css`,
+which the Magnus `npm run themes:web` runs automatically. The browser-tab
+icon updates live. iOS only reads the home-screen icon when you "Add to Home
+Screen", so re-add the app to pick up a new theme's icon there. The picker and toggle live in the
 sidebar footer.

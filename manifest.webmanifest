@@ -3,9 +3,19 @@
   "short_name": "Life Tracker",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f2e2d6",
-  "theme_color": "#bf5433",
+  "background_color": "#211c18",
+  "theme_color": "#211c18",
   "icons": [
-    { "src": "build/icon.png", "sizes": "512x512", "type": "image/png" }
+    {
+      "src": "icons/hearth.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/hearth-180.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
   ]
 }
