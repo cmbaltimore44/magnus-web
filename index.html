@@ -53,6 +53,7 @@
         <button class="nav-item" data-view="board">Board</button>
         <button class="nav-item" data-view="routines">Routines</button>
         <button class="nav-item" data-view="projects">Projects</button>
+        <button class="nav-item" data-view="lists">Lists</button>
         <button class="nav-item" data-view="library">Library</button>
         <button class="nav-item" data-view="log">Log</button>
         <button class="nav-item" data-view="insights">Insights</button>
@@ -280,6 +281,65 @@
             <div class="danger-zone">
               <span class="meta-label">Danger Zone</span>
               <button id="delete-project-btn" class="btn btn-danger">Delete project…</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Lists view -->
+      <section class="view" id="view-lists" hidden>
+        <header class="topbar">
+          <div class="topbar-title">
+            <h1>Lists</h1>
+            <span class="subtitle" id="lists-count"></span>
+          </div>
+          <div class="topbar-controls">
+            <button id="new-list-btn" class="btn btn-primary">+ New List</button>
+          </div>
+        </header>
+        <div class="detail-scroll" id="lists-schema-wrap" hidden>
+          <div class="empty-hint schema-hint" id="lists-schema-hint"></div>
+        </div>
+        <div class="lists-layout" id="lists-layout">
+          <div class="lists-index-panel">
+            <ul class="routine-list lists-index" id="lists-index" aria-label="Lists"></ul>
+          </div>
+          <div class="lists-detail-panel" id="lists-detail-panel">
+            <div class="empty-hint" id="lists-detail-empty" hidden></div>
+            <div id="lists-detail-content">
+              <button type="button" class="back-link lists-back-btn" id="lists-back-btn">&larr; All lists</button>
+              <div class="lists-detail-header" id="lists-detail-header">
+                <div class="lists-detail-title">
+                  <h2 id="list-title"></h2>
+                  <span class="subtitle" id="list-meta"></span>
+                </div>
+                <div class="lists-detail-actions">
+                  <button type="button" class="btn btn-ghost lists-small-btn" id="rename-list-btn">Rename</button>
+                  <button type="button" class="btn btn-ghost lists-small-btn" id="delete-list-btn">Delete</button>
+                </div>
+              </div>
+              <form class="routine-add-form lists-rename-form" id="list-rename-form" autocomplete="off" hidden>
+                <input type="text" id="list-rename-input" aria-label="List name" maxlength="80" required enterkeyhint="done" />
+                <button type="submit" class="btn btn-primary">Save</button>
+                <button type="button" class="btn btn-ghost" id="list-rename-cancel">Cancel</button>
+              </form>
+              <form class="routine-add-form lists-add-form" id="list-item-form" autocomplete="off">
+                <input type="text" id="list-item-input" placeholder="Add an item…" aria-label="Add an item" enterkeyhint="enter" required />
+                <button type="submit" class="btn btn-ghost">Add</button>
+              </form>
+              <ul class="routine-list lists-items" id="list-items"></ul>
+              <div class="lists-total" id="list-total" hidden>
+                <span class="meta-label">Total to buy</span>
+                <span class="lists-price" id="list-total-value"></span>
+              </div>
+              <div class="checklist-header lists-checked-header" id="list-checked-header" hidden>
+                <button type="button" class="lists-checked-toggle" id="list-checked-toggle" aria-expanded="false">
+                  <span class="meta-label" id="list-checked-label"></span>
+                  <span class="library-group-caret" id="list-checked-caret">&#9656;</span>
+                </button>
+                <button type="button" class="btn btn-ghost lists-small-btn" id="clear-checked-btn">Clear checked</button>
+              </div>
+              <ul class="routine-list lists-items lists-checked" id="list-checked-items" hidden></ul>
             </div>
           </div>
         </div>

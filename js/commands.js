@@ -5,6 +5,7 @@ import { openQuickAdd } from './quickAddBar.js';
 import { startFocus, stopFocus, isFocusRunning } from './focus.js';
 import { openTaskModal, refreshBoard } from './views/board.js';
 import { handleNewProject } from './views/projects.js';
+import { handleNewList } from './views/lists.js';
 import { handleNewBook } from './views/library.js';
 
 // Actions for the command palette (⌘⇧P, or ">" in global search).
@@ -15,6 +16,7 @@ const VIEWS = [
   ['Board', '#/board'],
   ['Routines', '#/routines'],
   ['Projects', '#/projects'],
+  ['Lists', '#/lists'],
   ['Library', '#/library'],
   ['Quotes', '#/library/quotes'],
   ['Reading stats', '#/library/stats'],
@@ -40,6 +42,7 @@ function staticCommands() {
       },
     },
     { label: 'New project', run: handleNewProject },
+    { label: 'New list', run: handleNewList },
     {
       label: 'New book',
       run: async () => {

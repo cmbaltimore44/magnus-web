@@ -10,6 +10,7 @@ Live at <https://life-tracker-hq.vercel.app>.
 - **Board**: three columns (To Do, In Progress, Done) with drag-and-drop on desktop; on mobile the same tasks render as a single stacked, scrollable list (touch devices can't drag-and-drop), and every task has a Status dropdown as a non-drag way to move it between columns. Categories with colors, due dates with overdue/soon-due highlighting, priority levels, notes, search, and filtering.
 - **Routines**: daily habits grouped into Morning / Afternoon / Evening checklists, with streak tracking and drag-to-reorder.
 - **Projects**: a list of projects with status and target dates, each with its own notes and a checklist of sub-tasks.
+- **Lists**: groceries, a wish list, packing… Checkable items with an optional link and price (the list totals what's left to buy); checked items collect in a collapsed group with a one-tap "Clear checked". Quick add `+groceries oat milk` adds straight to a list. Needs [`supabase/schema_004.sql`](supabase/schema_004.sql).
 - **Library**: track books you're reading (status, format, dates, rating, cover image, notes) and collect highlights/quotes from them, plus standalone quotes — with a favorites filter.
 - **Global search**: press `Cmd`/`Ctrl`+`K` or tap the floating search button to jump straight to any task, project, book, quote, or routine.
 - **Voice-to-text**: a dictation button (Web Speech API) on notes and quote fields, handy on mobile.
@@ -69,6 +70,7 @@ Visit the deployed URL from your phone's browser and sign in with the same email
 | `js/views/board.js` | Board rendering (desktop columns / mobile list), task and category modals, drag-and-drop |
 | `js/views/routines.js` | Routines checklist rendering, streaks, drag-and-drop |
 | `js/views/projects.js` | Projects list and detail panel, checklist items |
+| `js/views/lists.js` | Lists: the lists and the open list side by side (one at a time on phones), items, Clear checked |
 | `js/views/library.js` | Books list/detail, highlights, and the standalone quotes tab |
 | `supabase/schema.sql`, `supabase/schema_002.sql` | Database schema + Row Level Security policies |
 | `supabase/import_electron_data.sql` | Optional one-off migration from the original Electron app's local data |

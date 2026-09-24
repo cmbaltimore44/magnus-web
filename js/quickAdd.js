@@ -8,6 +8,8 @@ import { parseDateInput } from './dates.js';
 //     #home      category whose name starts with "home" (case-insensitive)
 //     *          starred
 //   "> some thought" goes to the journal inbox instead (Magnus only).
+//   "+groceries oat milk" adds "oat milk" to the list whose name starts with
+//   "groceries" (Lists, schema_004); an unknown list name is reported, not guessed.
 // Words that look like tokens but don't resolve (an unknown #tag, a date
 // word that isn't a date) stay in the title, so nothing is silently lost.
 // The Life Tracker web app has a copy of this file (js/quickAdd.js); keep
@@ -19,6 +21,9 @@ const DATE_WORD = /^(today|tod|tomorrow|tom|mon|tue|wed|thu|fri|sat|sun|monday|t
 export function parseQuickAdd(text, categories = [], now = new Date()) {
   const raw = String(text || '').trim();
   if (raw.startsWith('>')) return { inbox: raw.slice(1).trim() };
+  // ("+3 call mom" is still a due date: list names start with a letter.)
+  const toList = /^\+(?=$|\s|\p{L})(\S*)\s*(.*)$/u.exec(raw);
+  if (toList) return { list: toList[1], text: toList[2].trim() };
   const out = { title: '', due_date: null, priority: 'medium', category_id: null, is_starred: false };
   const words = [];
   for (const word of raw.split(/\s+/).filter(Boolean)) {
@@ -56,9 +61,21 @@ export function parseQuickAdd(text, categories = [], now = new Date()) {
   return out;
 }
 
+// The list a "+name" quick add points at: exact name first, then prefix.
+export function findList(lists, name) {
+  const n = String(name || '').toLowerCase();
+  if (!n) return null;
+  return lists.find((l) => l.name.toLowerCase() === n) || lists.find((l) => l.name.toLowerCase().startsWith(n)) || null;
+}
+
 // One-line description of what a parse will create, for the preview line.
-export function describeQuickAdd(parsed, categories = []) {
+export function describeQuickAdd(parsed, categories = [], lists = []) {
   if (parsed.inbox != null) return parsed.inbox ? `→ journal inbox: ${parsed.inbox}` : '→ journal inbox';
+  if (parsed.list != null) {
+    const list = findList(lists, parsed.list);
+    if (!parsed.list) return '+list item → a list (e.g. +groceries oat milk)';
+    return list ? `→ ${list.name}${parsed.text ? `: ${parsed.text}` : ''}` : `no list named “${parsed.list}”`;
+  }
   const bits = [];
   if (parsed.due_date) bits.push(`due ${parsed.due_date}`);
   if (parsed.priority !== 'medium') bits.push(`${parsed.priority} priority`);

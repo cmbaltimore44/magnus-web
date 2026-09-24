@@ -50,6 +50,7 @@ export const START_VIEWS = [
   ['board', 'Board'],
   ['routines', 'Routines'],
   ['projects', 'Projects'],
+  ['lists', 'Lists'],
   ['library', 'Library'],
   ['log', 'Log'],
   ['insights', 'Insights'],

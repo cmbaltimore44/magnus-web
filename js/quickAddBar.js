@@ -1,17 +1,23 @@
 import * as tasksApi from './data/tasks.js';
 import * as categoriesApi from './data/categories.js';
-import { parseQuickAdd, describeQuickAdd } from './quickAdd.js';
+import * as listsApi from './data/lists.js';
+import { parseQuickAdd, describeQuickAdd, findList } from './quickAdd.js';
+import { isMissingSchema, SCHEMA_004_HINT } from './schema.js';
 import { showError, showToast } from './toast.js';
 import { notifyDataChanged, isTyping, anyModalOpen } from './events.js';
 
-// Quick add: one line → a new task, from any view (syntax in js/quickAdd.js).
+// Quick add: one line → a new task (or, with "+groceries oat milk", an item
+// on a list), from any view (syntax in js/quickAdd.js).
 // On desktop it's a bar above every view; on phones a floating + opens it.
 
 const INBOX_MESSAGE = 'Journal inbox is only available in Magnus.';
+const LIST_USAGE = 'Type +list then the item, e.g. +groceries oat milk.';
 const MAX_STARRED = 3;
 
 let userId = null;
 let categories = [];
+let lists = [];
+let listsMissing = false; // schema_004 not run yet
 let busy = false;
 const el = {};
 
@@ -31,6 +37,14 @@ async function loadCategories() {
   } catch {
     // Preview just won't resolve #categories; submitting reports real errors.
   }
+  try {
+    lists = await listsApi.listLists();
+    listsMissing = false;
+    renderPreview();
+  } catch (err) {
+    listsMissing = isMissingSchema(err);
+    renderPreview();
+  }
 }
 
 function renderPreview() {
@@ -46,6 +60,16 @@ function renderPreview() {
   if (parsed.inbox != null) {
     el.preview.textContent = INBOX_MESSAGE;
     el.preview.classList.add('quickadd-preview-warn');
+    return;
+  }
+  if (parsed.list != null) {
+    if (listsMissing) {
+      el.preview.textContent = `Lists need their database tables. ${SCHEMA_004_HINT}`;
+      el.preview.classList.add('quickadd-preview-warn');
+      return;
+    }
+    el.preview.textContent = describeQuickAdd(parsed, categories, lists);
+    if (parsed.list && !findList(lists, parsed.list)) el.preview.classList.add('quickadd-preview-warn');
     return;
   }
   if (!parsed.title) {
@@ -64,6 +88,10 @@ async function handleSubmit(e) {
   const parsed = parseQuickAdd(text, categories);
   if (parsed.inbox != null) {
     showToast(INBOX_MESSAGE, { type: 'info' });
+    return;
+  }
+  if (parsed.list != null) {
+    await addToList(parsed);
     return;
   }
   if (!parsed.title) {
@@ -94,6 +122,40 @@ async function handleSubmit(e) {
     el.input.value = '';
     renderPreview();
     showToast(`Added “${parsed.title}”.`, { type: 'success', duration: 2500 });
+    if (el.form.classList.contains('open')) closeQuickAdd();
+    notifyDataChanged('quickadd');
+  } catch (err) {
+    showError(err);
+  } finally {
+    busy = false;
+  }
+}
+
+// "+groceries oat milk" → "oat milk" at the end of Groceries.
+async function addToList(parsed) {
+  if (!parsed.list || !parsed.text) {
+    showToast(LIST_USAGE, { type: 'info' });
+    return;
+  }
+  busy = true;
+  try {
+    try {
+      lists = await listsApi.listLists();
+    } catch (err) {
+      if (!isMissingSchema(err)) throw err;
+      listsMissing = true;
+      showToast(`Lists need their database tables. ${SCHEMA_004_HINT}`, { type: 'info' });
+      return;
+    }
+    const list = findList(lists, parsed.list);
+    if (!list) {
+      showToast(`No list named “${parsed.list}”.`, { type: 'error' });
+      return;
+    }
+    await listsApi.appendItem(userId, list.id, parsed.text);
+    el.input.value = '';
+    renderPreview();
+    showToast(`Added “${parsed.text}” to ${list.name}.`, { type: 'success', duration: 2500 });
     if (el.form.classList.contains('open')) closeQuickAdd();
     notifyDataChanged('quickadd');
   } catch (err) {

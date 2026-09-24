@@ -62,3 +62,28 @@ export async function deleteWithUndo({ message, table, id, del, cascades = [], r
     },
   });
 }
+
+// Several rows of one table at once (e.g. Lists' "Clear checked"): one
+// toast, one Undo that puts them all back.
+export async function deleteRowsWithUndo({ message, table, ids, del, onRestored }) {
+  if (!ids.length) return;
+  const { data: rows, error } = await supabase.from(table).select('*').in('id', ids);
+  if (error) throw error;
+
+  await del();
+
+  showActionToast(message, {
+    actionLabel: 'Undo',
+    duration: UNDO_MS,
+    onAction: async () => {
+      try {
+        await insertRows(table, rows);
+        showToast('Restored.', { type: 'success', duration: 2500 });
+        notifyDataChanged('undo');
+        if (onRestored) await onRestored();
+      } catch (err) {
+        showError(err);
+      }
+    },
+  });
+}

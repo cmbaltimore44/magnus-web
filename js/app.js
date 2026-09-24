@@ -5,6 +5,7 @@ import { initToday, refreshToday } from './views/today.js';
 import { initBoard, refreshBoard } from './views/board.js';
 import { initRoutines, refreshRoutines } from './views/routines.js';
 import { initProjects, refreshProjects } from './views/projects.js';
+import { initLists, refreshLists, isListsEditing } from './views/lists.js';
 import { initLibrary, refreshLibrary } from './views/library.js';
 import { initUpcoming, refreshUpcoming } from './views/upcoming.js';
 import { initLog, refreshLog, isLogDirty } from './views/log.js';
@@ -76,7 +77,7 @@ document.getElementById('sign-out-btn').addEventListener('click', async () => {
 
 // ---------- routing ----------
 
-const VIEW_IDS = ['today', 'upcoming', 'board', 'routines', 'projects', 'library', 'log', 'insights', 'settings'];
+const VIEW_IDS = ['today', 'upcoming', 'board', 'routines', 'projects', 'lists', 'library', 'log', 'insights', 'settings'];
 
 // Views that only load their data when shown.
 const LAZY_VIEWS = ['upcoming', 'log', 'insights'];
@@ -87,6 +88,7 @@ const REFRESH = {
   board: refreshBoard,
   routines: refreshRoutines,
   projects: refreshProjects,
+  lists: refreshLists,
   library: refreshLibrary,
   log: refreshLog,
   insights: refreshInsights,
@@ -141,12 +143,12 @@ function wireDataChanged() {
   });
 }
 
-// Live updates (js/live.js) wait while a dialog is open or the Log has
-// unsaved edits, so a refresh never wipes what you're typing.
+// Live updates (js/live.js) wait while a dialog is open, the Log has
+// unsaved edits, or a list item / list name is being edited, so a refresh never wipes what you're typing.
 function wireLiveUpdates() {
   initLiveUpdates(
     () => REFRESH[currentView()]?.(),
-    () => !anyModalOpen() && !isLogDirty()
+    () => !anyModalOpen() && !isLogDirty() && !isListsEditing()
   );
 }
 
@@ -187,6 +189,7 @@ async function enterApp(session) {
     initBoard(uid),
     initRoutines(uid),
     initProjects(uid),
+    initLists(uid),
     initLibrary(uid),
     initUpcoming(uid),
     initLog(uid),
