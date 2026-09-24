@@ -34,7 +34,9 @@
   function apply() {
     var mode = read(MODE_KEY, 'auto');
     var dark = mode === 'dark' || (mode === 'auto' && !!media && media.matches);
-    root.setAttribute('data-palette', read(PALETTE_KEY, 'hearth'));
+    // Only plain theme names (it also ends up in the icon URLs below).
+    var saved = read(PALETTE_KEY, 'hearth');
+    root.setAttribute('data-palette', /^[a-z][a-z-]{0,30}$/.test(saved) ? saved : 'hearth');
     if (dark) root.setAttribute('data-theme', 'dark');
     else root.removeAttribute('data-theme');
     // Browser/phone chrome color follows the theme background.
