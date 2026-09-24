@@ -4,6 +4,7 @@ import * as routinesApi from '../data/routines.js';
 import * as completionsApi from '../data/completions.js';
 import * as quotesApi from '../data/quotes.js';
 import * as booksApi from '../data/books.js';
+import { loadGoals } from '../data/lists.js';
 import { getCategory as getCategoryFrom, dueStatus, formatDue } from '../taskDisplay.js';
 import { showError } from '../toast.js';
 
@@ -15,6 +16,7 @@ let routines = [];
 let completions = new Map();
 let quote = null;
 let books = [];
+let goals = [];
 
 const el = {};
 
@@ -24,11 +26,37 @@ function cacheElements() {
     starredList: document.getElementById('today-starred-list'),
     quote: document.getElementById('today-quote'),
     routinesWidget: document.getElementById('today-routines-widget'),
+    goals: document.getElementById('today-goals'),
   });
 }
 
 function getCategory(categoryId) {
   return getCategoryFrom(categories, categoryId);
+}
+
+// Your active goals (the unchecked items of a list named "Goals"), as a
+// strip under the header; tapping it opens the list.
+function renderGoals() {
+  if (!el.goals) return;
+  el.goals.replaceChildren();
+  el.goals.hidden = goals.length === 0;
+  if (!goals.length) return;
+  const link = document.createElement('a');
+  link.className = 'today-goals-link';
+  link.href = `#/lists/${goals[0].list_id}`;
+  const label = document.createElement('span');
+  label.className = 'today-goals-label';
+  label.textContent = 'Goals';
+  link.appendChild(label);
+  const ul = document.createElement('ul');
+  ul.className = 'today-goals-list';
+  for (const g of goals) {
+    const li = document.createElement('li');
+    li.textContent = g.text;
+    ul.appendChild(li);
+  }
+  link.appendChild(ul);
+  el.goals.appendChild(link);
 }
 
 function renderDate() {
@@ -204,12 +232,13 @@ export async function initToday() {
 
 export async function refreshToday() {
   try {
-    [tasks, categories, routines, completions, books] = await Promise.all([
+    [tasks, categories, routines, completions, books, goals] = await Promise.all([
       tasksApi.listTasks(),
       categoriesApi.listCategories(),
       routinesApi.listRoutines(),
       completionsApi.listCompletions(),
       booksApi.listBooks(),
+      loadGoals(),
     ]);
     // Only roll a new featured quote when there isn't one yet, so refocusing
     // the tab (which re-triggers this refresh) doesn't swap it out under you.
@@ -218,6 +247,7 @@ export async function refreshToday() {
     showError(err);
     return;
   }
+  renderGoals();
   renderStarred();
   renderRoutinesWidget();
   renderQuote();

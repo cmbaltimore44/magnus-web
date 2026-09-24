@@ -111,3 +111,21 @@ export function parsePrice(text) {
 }
 
 export const money = (n) => `$${Number(n).toFixed(2).replace(/\.00$/, '')}`;
+
+// Goals live in a list named "Goals": unchecked items are active goals
+// (checked = achieved). Shown on Today. Same rule as Magnus lib/data/lists.js.
+export function activeGoals(lists, items) {
+  const list = lists.find((l) => l.name.trim().toLowerCase() === 'goals');
+  if (!list) return [];
+  return items.filter((i) => i.list_id === list.id && !i.done).sort((a, b) => a.sort_order - b.sort_order);
+}
+
+// Active goals, or [] when there's no Goals list (or no Lists tables yet).
+export async function loadGoals() {
+  try {
+    const [lists, items] = await Promise.all([listLists(), listAllItems()]);
+    return activeGoals(lists, items);
+  } catch {
+    return [];
+  }
+}
