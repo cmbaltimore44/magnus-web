@@ -53,6 +53,7 @@
         <button class="nav-item" data-view="routines">Routines</button>
         <button class="nav-item" data-view="projects">Projects</button>
         <button class="nav-item" data-view="library">Library</button>
+        <button class="nav-item" data-view="log">Log</button>
       </nav>
       <div class="sidebar-footer">
         <select id="palette-select" class="palette-select" title="Color theme" aria-label="Color theme"></select>
@@ -429,6 +430,59 @@
             </div>
           </header>
           <div class="detail-scroll stats-body" id="library-stats"></div>
+        </div>
+      </section>
+
+      <!-- Log view -->
+      <section class="view" id="view-log" hidden>
+        <header class="topbar">
+          <div class="topbar-title">
+            <h1>Log</h1>
+            <span class="subtitle" id="log-date-label"></span>
+          </div>
+          <div class="topbar-controls log-date-controls">
+            <button type="button" class="btn btn-ghost" id="log-prev-btn" title="Previous day" aria-label="Previous day">&lsaquo;</button>
+            <input type="date" id="log-date-input" class="log-date-input" aria-label="Date" />
+            <button type="button" class="btn btn-ghost" id="log-next-btn" title="Next day" aria-label="Next day">&rsaquo;</button>
+            <button type="button" class="btn btn-ghost" id="log-today-btn">Today</button>
+          </div>
+        </header>
+        <div class="detail-scroll stats-body">
+          <div class="empty-hint schema-hint" id="log-schema-hint" hidden></div>
+          <div id="log-content">
+            <form class="log-form" id="log-form" autocomplete="off">
+              <div class="field-row">
+                <label class="field">
+                  <span>Sleep (hours)</span>
+                  <input type="number" id="log-sleep" min="0" max="24" step="0.25" inputmode="decimal" />
+                </label>
+                <label class="field">
+                  <span id="log-weight-label">Weight (lb)</span>
+                  <input type="number" id="log-weight" min="0" step="0.1" inputmode="decimal" />
+                </label>
+              </div>
+              <div class="field">
+                <span>Mood (1–5)</span>
+                <div class="scale" id="log-mood" role="group" aria-label="Mood"></div>
+              </div>
+              <div class="field">
+                <span>Energy (1–5)</span>
+                <div class="scale" id="log-energy" role="group" aria-label="Energy"></div>
+              </div>
+              <button type="submit" class="btn btn-primary">Save</button>
+            </form>
+
+            <div class="checklist-header"><span class="meta-label">Workouts</span></div>
+            <ul class="routine-list" id="log-workouts"></ul>
+            <form class="routine-add-form log-workout-form" id="log-workout-form" autocomplete="off">
+              <input type="number" id="log-workout-minutes" min="1" step="1" placeholder="Minutes" inputmode="numeric" aria-label="Workout minutes" required />
+              <input type="text" id="log-workout-type" placeholder="Type (run, lift, yoga…)" aria-label="Workout type" />
+              <button type="submit" class="btn btn-ghost">Add</button>
+            </form>
+
+            <div class="checklist-header"><span class="meta-label">Last 14 days</span></div>
+            <div class="log-history-wrap"><table class="log-history" id="log-history"></table></div>
+          </div>
         </div>
       </section>
     </div>

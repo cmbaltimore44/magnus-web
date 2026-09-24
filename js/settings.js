@@ -29,3 +29,16 @@ export function getFocusMinutes() {
 export function setFocusMinutes(minutes) {
   write(FOCUS_KEY, minutes);
 }
+
+const WEIGHT_UNIT_KEY = 'kanban.weightUnit';
+export const WEIGHT_UNITS = ['lb', 'kg'];
+
+// Just the label shown next to weights; stored values aren't converted.
+export function getWeightUnit() {
+  const unit = read(WEIGHT_UNIT_KEY);
+  return WEIGHT_UNITS.includes(unit) ? unit : 'lb';
+}
+
+export function setWeightUnit(unit) {
+  write(WEIGHT_UNIT_KEY, unit);
+}
