@@ -88,7 +88,7 @@ This writes `build/icon-source.png` (1024×1024 master), `build/icon.png` (512×
 
 ## Themes
 
-Color themes (Life Tracker, Heather, Lakeglow, Beacon) are shared with the
+Color themes (Hearth — the original Life Tracker palette — Heather, Lakeglow, Beacon) are shared with the
 Magnus terminal app. `themes.css` and `js/palettes.js` are **generated** in
 the Magnus repo (`npm run themes:web`); don't edit them by hand.
 `js/theme-boot.js` applies the saved theme and light/dark mode (Auto follows

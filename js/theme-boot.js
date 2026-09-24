@@ -19,6 +19,12 @@
       return fallback;
     }
   }
+  // The "life-tracker" theme was renamed "hearth"; carry saved choices over.
+  if (read(PALETTE_KEY, '') === 'life-tracker') {
+    try {
+      localStorage.setItem(PALETTE_KEY, 'hearth');
+    } catch (e) {}
+  }
   function write(key, value) {
     try {
       localStorage.setItem(key, value);
@@ -28,7 +34,7 @@
   function apply() {
     var mode = read(MODE_KEY, 'auto');
     var dark = mode === 'dark' || (mode === 'auto' && !!media && media.matches);
-    root.setAttribute('data-palette', read(PALETTE_KEY, 'life-tracker'));
+    root.setAttribute('data-palette', read(PALETTE_KEY, 'hearth'));
     if (dark) root.setAttribute('data-theme', 'dark');
     else root.removeAttribute('data-theme');
     // Browser/phone chrome color follows the theme background.
@@ -46,7 +52,7 @@
   window.lifeTrackerTheme = {
     apply: apply,
     getPalette: function () {
-      return read(PALETTE_KEY, 'life-tracker');
+      return read(PALETTE_KEY, 'hearth');
     },
     setPalette: function (key) {
       write(PALETTE_KEY, key);

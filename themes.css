@@ -4,8 +4,8 @@
  * via html[data-palette="…"]; dark via html[data-palette="…"][data-theme="dark"].
  * js/theme-boot.js sets both attributes. */
 
-/* Life Tracker — light */
-html[data-palette="life-tracker"] {
+/* Hearth — light */
+html[data-palette="hearth"] {
   --bg: #f2e2d6;
   --surface: #f9f1eb;
   --sidebar-bg: #f4e5db;
@@ -30,8 +30,8 @@ html[data-palette="life-tracker"] {
   --theme-color: #f2e2d6;
 }
 
-/* Life Tracker — dark */
-html[data-palette="life-tracker"][data-theme="dark"] {
+/* Hearth — dark */
+html[data-palette="hearth"][data-theme="dark"] {
   --bg: #211c18;
   --surface: #27221e;
   --sidebar-bg: #1a1613;
