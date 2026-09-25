@@ -1,16 +1,21 @@
 import * as focusApi from './data/focus.js';
+import * as tasksApi from './data/tasks.js';
 import * as pomo from './pomodoro.js';
 import { getPomodoroSettings } from './settings.js';
 import { showError, showToast } from './toast.js';
 import { notifyDataChanged } from './events.js';
 import { isMissingSchema, SCHEMA_003_HINT } from './schema.js';
+import { openPicker } from './search.js';
+import { focusChoices, typedChoice } from './focusPicker.js';
 
 // Pomodoro focus timer: focus → break → … with a long break after every few
 // rounds (the rules are in js/pomodoro.js, shared with Magnus). A small pill
 // stays visible across views. When a phase's time is up it waits (chime +
 // notification) until you start the next phase or add 5 minutes. The timer
 // object lives in localStorage so it survives a reload; focus minutes are
-// saved to focus_sessions when you leave a focus phase (next, skip or stop).
+// saved to focus_sessions when you leave a focus phase (next, skip or stop),
+// or switch task in the middle of one. A timer can be on a task, on a label
+// ("job apps": anything typed in the picker), or on nothing in particular.
 
 const STATE_KEY = 'kanban.pomodoro';
 const OLD_STATE_KEY = 'kanban.focusTimer'; // pre-Pomodoro single countdown
@@ -173,19 +178,31 @@ export function formatMinutes(minutes) {
   return m ? `${h} h ${m} min` : `${h} h`;
 }
 
-async function record(log, title) {
-  if (!log || log.minutes < 1) return;
+// “Draft Q4” / “job apps”, or "no task".
+const named = (title) => (title ? `“${title}”` : 'no task');
+
+// True if saved. `quiet`: no "Saved …" toast (the caller says it instead).
+// Before schema_005 a label can't be stored: the time is saved without it.
+async function record(log, title, { quiet = false } = {}) {
+  if (!log || log.minutes < 1) return false;
   try {
-    await focusApi.createFocusSession(userId, {
+    const row = await focusApi.createFocusSession(userId, {
       task_id: log.taskId,
       started_at: new Date(log.startedAt).toISOString(),
       minutes: log.minutes,
+      label: log.label,
     });
     notifyDataChanged('focus');
-    showToast(`Saved ${formatMinutes(log.minutes)} of focus${title ? ` on “${title}”` : ''}.`, { type: 'success', duration: 3000 });
+    if (row?.labelDropped) {
+      showToast(`Focus logged without its label “${log.label}”: run supabase/schema_005.sql to keep labels`, { type: 'error', duration: 7000 });
+      return true;
+    }
+    if (!quiet) showToast(`Saved ${formatMinutes(log.minutes)} of focus${title ? ` on “${title}”` : ''}.`, { type: 'success', duration: 3000 });
+    return true;
   } catch (err) {
     if (isMissingSchema(err)) showToast(`Focus session not saved. ${SCHEMA_003_HINT}`, { type: 'info', duration: 7000 });
     else showError(err);
+    return false;
   }
 }
 
@@ -193,6 +210,19 @@ async function record(log, title) {
 
 function nextLabel(t, settings) {
   return pomo.nextPhaseOf(t, settings).phase === 'focus' ? 'Start focus' : 'Start break';
+}
+
+// Mid-round, switching logs the time so far; otherwise it's for the next round.
+const focusing = (t) => t.phase === 'focus' && t.status === 'running';
+
+// Labels for switching task (same as Magnus's T menu); unassign is null
+// when there's no task or label to take off.
+function switchLabels(t) {
+  const during = focusing(t);
+  return {
+    switch: during ? 'Switch task… (logs the time so far to this one)' : 'Switch task…',
+    unassign: t.taskId || t.label ? (during ? 'Focus on no task (logs the time so far)' : 'Focus on no task') : null,
+  };
 }
 
 function render() {
@@ -232,6 +262,7 @@ function render() {
   el.skipBtn.hidden = ended;
   el.skipBtn.title = timer.phase === 'focus' ? 'End this focus round now and start the break' : 'End the break now and start focusing';
   el.extendBtn.textContent = ended ? '+5 min' : '+5';
+  el.switchBtn.title = switchLabels(timer).switch;
   // Phone, collapsed: only the main action is shown next to the clock.
   el.nextBtn.classList.toggle('focus-pill-main', ended);
   el.pauseBtn.classList.toggle('focus-pill-main', !ended);
@@ -292,6 +323,7 @@ export function timerState() {
     paused: !!timer.pausedAt,
     phase: timer.phase,
     nextLabel: nextLabel(timer, getPomodoroSettings()),
+    switchLabels: switchLabels(timer),
   };
 }
 
@@ -299,20 +331,85 @@ export function onTimerChange(fn) {
   listeners.add(fn);
 }
 
-export async function startFocus(task = null) {
+// `to`: a task { id, title }, a label { label }, or null for nothing in
+// particular. Focusing on something while a timer runs switches the timer to it.
+export async function startFocus(to = null) {
+  if (timer && to) return switchFocus(to);
   unlockAudio();
   askNotificationPermission();
   const now = Date.now();
   const prev = timer;
   // One timer at a time: keep what's been done, stay in the same cycle.
   const round = prev ? (prev.phase === 'long' ? 0 : prev.round) : 0;
-  set(pomo.startFocus(task, getPomodoroSettings(), now, round));
-  const minutes = timer.minutes;
-  showToast(task ? `Focusing on “${task.title}” for ${formatMinutes(minutes)}.` : `Focus for ${formatMinutes(minutes)}.`, {
-    type: 'info',
-    duration: 2500,
-  });
+  set(pomo.startFocus(to, getPomodoroSettings(), now, round));
+  showToast(`Focus: ${formatMinutes(timer.minutes)}${timer.title ? ` on ${named(timer.title)}` : ''}.`, { type: 'info', duration: 2500 });
   if (prev) await record(pomo.stop(prev, now), prev.title);
+}
+
+// Keep the clock and round, change what it's on (a task, a label, or null).
+export async function switchFocus(to = null) {
+  if (!timer) return;
+  const prev = timer;
+  if (pomo.sameTarget(prev, to)) {
+    const text = to ? `Already focusing on ${named(to.id ? to.title : to.label.trim())}` : 'Not focusing on anything in particular already';
+    showToast(text, { type: 'info', duration: 2500 });
+    return;
+  }
+  const { timer: next, log } = pomo.switchTask(prev, to, Date.now());
+  set(next);
+  const logged = await record(log, prev.title, { quiet: true });
+  const when = focusing(prev) ? 'Now focusing on' : 'Next focus round: on';
+  const text = `${when} ${named(next.title)}${logged ? ` · logged ${formatMinutes(log.minutes)} to ${named(prev.title)}` : ''}`;
+  showToast(text, { type: 'success', duration: 3000 });
+  announce(text);
+}
+
+// What to focus on, for starting a timer (no timer yet) or Switch… (one
+// running): starred tasks, recent labels, the other open tasks, or anything
+// typed (it becomes the label).
+export async function openFocusPicker() {
+  const since = new Date(Date.now() - 60 * 86400000).toISOString();
+  let tasks;
+  let sessions;
+  try {
+    [tasks, sessions] = await Promise.all([
+      tasksApi.listTasks(),
+      focusApi.listFocusSessions(since).catch(() => []), // no schema_003 yet: no recent labels
+    ]);
+  } catch (err) {
+    showError(err);
+    return;
+  }
+  const current = timer;
+  const choices = focusChoices({
+    tasks: tasks.filter((t) => t.status !== 'done'),
+    labels: focusApi.recentLabels(sessions),
+    timer: current,
+  });
+  const starred = new Set(tasks.filter((t) => t.is_starred).map((t) => t.id));
+  const pick = (to) => (timer ? switchFocus(to) : startFocus(to));
+  const item = (c) => ({
+    title: c.id === 'none' && current ? switchLabels(current).unassign : c.label,
+    subtitle: [
+      c.group === 'Now' ? 'Focusing on this now' : '',
+      starred.has(c.to?.id) ? '★ Starred' : '',
+      c.group === 'Recent' ? 'Recent' : '',
+      c.hint || '',
+    ]
+      .filter(Boolean)
+      .join(' · '),
+    run: () => pick(c.to),
+  });
+  openPicker({
+    label: 'Focus timer',
+    placeholder: `${current ? 'Switch the focus timer to' : 'Focus on'}… a task, or type anything (job apps, an essay…)`,
+    items: choices.map(item),
+    typed: (text) => {
+      const c = typedChoice(text, choices);
+      return c ? item(c) : null;
+    },
+    empty: 'Nothing matches.',
+  });
 }
 
 // Start the next phase (after time's up), or skip ahead while running.
@@ -370,6 +467,7 @@ export function initFocus(uid) {
     pauseBtn: document.getElementById('focus-pause-btn'),
     skipBtn: document.getElementById('focus-skip-btn'),
     extendBtn: document.getElementById('focus-extend-btn'),
+    switchBtn: document.getElementById('focus-switch-btn'),
     stopBtn: document.getElementById('focus-stop-btn'),
     todayBtn: document.getElementById('today-focus-btn'),
   });
@@ -377,9 +475,10 @@ export function initFocus(uid) {
   el.pauseBtn.addEventListener('click', togglePauseTimer);
   el.skipBtn.addEventListener('click', advanceTimer);
   el.extendBtn.addEventListener('click', extendTimer);
+  el.switchBtn.addEventListener('click', openFocusPicker);
   el.stopBtn.addEventListener('click', stopFocus);
   el.summary.addEventListener('click', toggleExpanded);
-  el.todayBtn.addEventListener('click', () => startFocus(null));
+  el.todayBtn.addEventListener('click', openFocusPicker);
   PHONE.addEventListener('change', () => {
     expanded = false;
     render();

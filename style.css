@@ -1683,6 +1683,7 @@ input, textarea, select, button {
   padding: 16px 18px;
   outline: none;
 }
+.search-modal-input::placeholder { color: var(--text-muted); }
 
 .search-hint {
   font-family: var(--font-mono);
@@ -2027,7 +2028,7 @@ input, textarea, select, button {
   .focus-pill-btn { min-height: 44px; min-width: 44px; padding: 4px 12px; font-size: 14px; }
   .focus-pill:not(.expanded) .focus-pill-btn:not(.focus-pill-main) { display: none; }
   .focus-pill.expanded .focus-pill-actions { flex-basis: 100%; }
-  .focus-pill.expanded .focus-pill-btn { flex: 1 1 0; padding: 4px 6px; }
+  .focus-pill.expanded .focus-pill-btn { flex: 1 1 auto; padding: 4px 6px; } /* auto: “Switch…” needs more room */
 
   #today-focus-btn { min-height: 44px; }
 
@@ -2140,6 +2141,9 @@ input, textarea, select, button {
   font-size: 13px;
 }
 
+.bar-list-wide .bar-row { grid-template-columns: minmax(70px, 180px) 1fr 80px; }
+.bar-list-wide .bar-value { white-space: nowrap; }
+
 .bar-label {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2224,6 +2228,7 @@ input, textarea, select, button {
   .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .stats-body { padding-bottom: 120px; } /* scroll clear of the floating buttons */
   .bar-row { grid-template-columns: minmax(60px, 120px) 1fr 36px; }
+  .bar-list-wide .bar-row { grid-template-columns: minmax(60px, 120px) 1fr 76px; }
 }
 
 /* ---------- log ---------- */

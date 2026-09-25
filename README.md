@@ -56,7 +56,8 @@ Visit the deployed URL from your phone's browser and sign in with the same email
 | `index.html` | Sidebar shell, auth screen, all views (Today, Board, Routines, Projects, Library), global search overlay, and modals |
 | `style.css` | Theme variables (light/dark), layout, component styling, and mobile-specific responsive rules |
 | `js/app.js` | Entry point: auth gate, hash-based router, focus/visibility refresh, wires up search and voice input |
-| `js/focus.js` | Pomodoro focus timer: the pill on every view, chime + notification when a phase ends, saves focus_sessions |
+| `js/focus.js` | Pomodoro focus timer: the pill on every view, chime + notification when a phase ends, focus on a task or on anything typed (a label like "job apps"), switch mid-round, saves focus_sessions (labels need `supabase/schema_005.sql`) |
+| `js/focusPicker.js` | What the focus timer's picker offers (starred tasks, recent labels, open tasks, the typed text); a port of Magnus's `src/lib/focusPicker.js` without the journal |
 | `js/pomodoro.js` | Pure Pomodoro engine; a copy of Magnus's `src/lib/pomodoro.js` — keep the two identical |
 | `js/phoneNav.js` | Phone-width navigation: bottom tab bar (4 sections, chosen in Settings) and the More sheet with live counts |
 | `js/supabaseClient.js` | Supabase client init — put your project URL/anon key here |
@@ -66,7 +67,7 @@ Visit the deployed URL from your phone's browser and sign in with the same email
 | `js/hash.js` | Small helper for parsing the `#/a/b/c` hash route into segments |
 | `js/taskDisplay.js` | Shared pure display helpers (category lookup, due-date status) used by both Board and Today |
 | `js/toast.js` | Toast notifications (success/error/info) and the non-blocking delete-confirmation toast |
-| `js/search.js` | Global search modal: builds a search index, renders grouped results, keyboard navigation |
+| `js/search.js` | Global search modal: builds a search index, renders grouped results, keyboard navigation; also the command palette and a list picker (`openPicker`) |
 | `js/voiceInput.js` | Wires mic buttons to the Web Speech API for dictating into notes/quote fields |
 | `js/data/*.js` | CRUD calls to Supabase for tasks, categories, routines, completions, projects, project tasks, books, quotes, and the global search index |
 | `js/views/today.js` | Today dashboard: starred tasks, routines widget, quote widget |

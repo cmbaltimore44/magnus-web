@@ -12,14 +12,18 @@
 // Skip ends the current phase early and starts the next one.
 // Focus time is logged when you leave a focus phase (next, skip or stop),
 // counting only the time actually spent (pauses and waiting excluded).
+// Switching task mid-round logs the time so far to the old task and keeps
+// the clock and round going for the new one.
 //
 // timer = {
 //   taskId, title,            // task being focused on (both may be null)
+//   label,                    // or a label instead of a task ("job apps"); title = label then
 //   phase: 'focus' | 'short' | 'long',
 //   round,                    // focus rounds finished in this cycle (0..every)
 //   startedAt,                // ms when this phase started
 //   minutes,                  // phase length (grows with +5)
 //   pausedAt, pausedMs,       // pause bookkeeping
+//   loggedMs, segmentAt,      // focus already logged this round (task switches), and when the current task took over
 //   status: 'running' | 'ended',
 // }
 
@@ -34,16 +38,28 @@ export function settingsFrom(raw = {}) {
   return { focus: pick('focus', 1, 180), short: pick('short', 1, 60), long: pick('long', 1, 90), every: pick('every', 1, 12) };
 }
 
-export function startFocus(task, settings, now, round = 0) {
+// What a timer can focus on: a task { id, title }, a label { label }, or null.
+function target(to) {
+  const label = !to?.id && to?.label ? String(to.label).trim().slice(0, 120) || null : null;
+  return { taskId: to?.id ?? null, title: to?.id ? to.title ?? null : label, label };
+}
+
+export function sameTarget(t, to) {
+  const x = target(to);
+  return t.taskId === x.taskId && (t.label ?? null) === x.label;
+}
+
+export function startFocus(to, settings, now, round = 0) {
   return {
-    taskId: task?.id ?? null,
-    title: task?.title ?? null,
+    ...target(to),
     phase: 'focus',
     round,
     startedAt: now,
     minutes: settings.focus,
     pausedAt: null,
     pausedMs: 0,
+    loggedMs: 0,
+    segmentAt: null,
     status: 'running',
   };
 }
@@ -85,10 +101,25 @@ export function extend(t, now, minutes = 5) {
 }
 
 // The focus log for leaving `t` now: { taskId, startedAt, minutes } or null.
+// After a task switch, only the time since the last one counts.
 export function focusLog(t, now) {
   if (t?.phase !== 'focus') return null;
-  const minutes = Math.floor(elapsedMs(t, now) / 60000);
-  return minutes >= 1 ? { taskId: t.taskId, startedAt: t.startedAt, minutes } : null;
+  const minutes = Math.floor((elapsedMs(t, now) - (t.loggedMs || 0)) / 60000);
+  return minutes >= 1 ? { taskId: t.taskId, label: t.label ?? null, startedAt: t.segmentAt ?? t.startedAt, minutes } : null;
+}
+
+// Focus on a different task, a label, or nothing, without restarting anything.
+// Returns { timer, log }: in a focus round, log is the old task's time so
+// far (whole minutes; leftover seconds go to the new task). In a break, or
+// a phase waiting to be advanced, it just changes the next round's task.
+export function switchTask(t, to, now) {
+  const log = focusLog(t, now);
+  const timer = { ...t, ...target(to) };
+  if (log) {
+    timer.loggedMs = (t.loggedMs || 0) + log.minutes * 60000;
+    timer.segmentAt = now;
+  }
+  return { timer, log };
 }
 
 export function nextPhaseOf(t, settings) {
@@ -102,7 +133,7 @@ export function nextPhaseOf(t, settings) {
 export function advance(t, settings, now) {
   const log = focusLog(t, now);
   const { phase, round } = nextPhaseOf(t, settings);
-  const base = phase === 'focus' ? startFocus({ id: t.taskId, title: t.title }, settings, now, round) : null;
+  const base = phase === 'focus' ? startFocus(t.taskId ? { id: t.taskId, title: t.title } : t.label ? { label: t.label } : null, settings, now, round) : null;
   const timer = base || { ...t, phase, round, startedAt: now, minutes: settings[phase], pausedAt: null, pausedMs: 0, status: 'running' };
   return { timer, log };
 }

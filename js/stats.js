@@ -87,6 +87,23 @@ export function focusByWeek(sessions, today, weeks = 8) {
   return starts.map((start, i) => ({ start, minutes: mins[i] }));
 }
 
+// Focus minutes in the last `days` days by what they were on: a task's
+// title, a label, or "no task"; biggest first.
+export function focusByWhat(sessions, tasks, today, days = 30) {
+  const from = addDays(today, -(days - 1));
+  const titles = new Map(tasks.map((t) => [t.id, t.title]));
+  const groups = new Map(); // labels group regardless of case, shown as last typed
+  for (const s of [...sessions].sort((a, b) => String(a.started_at).localeCompare(String(b.started_at)))) {
+    const d = localDate(s.started_at);
+    if (d < from || d > today) continue;
+    const name = s.task_id ? titles.get(s.task_id) || 'a deleted task' : s.label?.trim() || 'no task';
+    const key = s.task_id ? `task:${s.task_id}` : `label:${name.toLowerCase()}`;
+    const g = groups.get(key) || { name, minutes: 0 };
+    groups.set(key, { name, minutes: g.minutes + s.minutes });
+  }
+  return [...groups.values()].sort((a, b) => b.minutes - a.minutes);
+}
+
 // Share of the last `days` days (ending today) each routine was done.
 export function routineRates(routines, completions, today, days = 30) {
   const from = addDays(today, -(days - 1));

@@ -2,7 +2,7 @@ import * as tasksApi from './data/tasks.js';
 import { PALETTES } from './palettes.js';
 import { MODES, MODE_LABELS, setPalette, setMode } from './theme.js';
 import { openQuickAdd } from './quickAddBar.js';
-import { startFocus, stopFocus, timerState, advanceTimer, togglePauseTimer, extendTimer } from './focus.js';
+import { startFocus, stopFocus, timerState, advanceTimer, togglePauseTimer, extendTimer, switchFocus, openFocusPicker } from './focus.js';
 import { openTaskModal, refreshBoard } from './views/board.js';
 import { handleNewProject } from './views/projects.js';
 import { handleNewList } from './views/lists.js';
@@ -70,16 +70,27 @@ function staticCommands() {
 // Focus timer: only what applies right now.
 function timerCommands() {
   const t = timerState();
-  if (!t) return [{ label: 'Start focus', run: () => startFocus(null) }];
+  if (!t) {
+    return [
+      { label: 'Start a focus timer…', run: openFocusPicker },
+      { label: 'Start a focus timer (nothing in particular)', run: () => startFocus(null) },
+    ];
+  }
+  const switching = [
+    { label: t.switchLabels.switch, run: openFocusPicker },
+    ...(t.switchLabels.unassign ? [{ label: t.switchLabels.unassign, run: () => switchFocus(null) }] : []),
+  ];
   if (t.ended) {
     return [
       { label: t.nextLabel, run: advanceTimer },
       { label: 'Timer: +5 min', run: extendTimer },
+      ...switching,
       { label: 'Stop timer', run: stopFocus },
     ];
   }
   return [
     { label: t.paused ? 'Resume timer' : 'Pause timer', run: togglePauseTimer },
+    ...switching,
     { label: t.phase === 'focus' ? 'Skip to break' : 'Skip to focus', run: advanceTimer },
     { label: 'Timer: +5 min', run: extendTimer },
     { label: 'Stop timer', run: stopFocus },

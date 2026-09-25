@@ -38,11 +38,12 @@ export function note(text) {
   return p;
 }
 
-// Horizontal bars: rows = [{ label, value, display? }].
-export function barList(rows, { max } = {}) {
+// Horizontal bars: rows = [{ label, value, display? }]. `wide`: room for
+// longer values like "3 h 20 min".
+export function barList(rows, { max, wide = false } = {}) {
   const top = max ?? Math.max(1, ...rows.map((r) => r.value));
   const list = document.createElement('div');
-  list.className = 'bar-list';
+  list.className = wide ? 'bar-list bar-list-wide' : 'bar-list';
   rows.forEach(({ label, value, display }) => {
     const row = document.createElement('div');
     row.className = 'bar-row';

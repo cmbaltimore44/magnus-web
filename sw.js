@@ -37,6 +37,7 @@ const SHELL = [
   'js/dates.js',
   'js/events.js',
   'js/focus.js',
+  'js/focusPicker.js',
   'js/hash.js',
   'js/live.js',
   'js/migrate.js',

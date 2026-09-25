@@ -12,12 +12,15 @@ const TYPE_LABELS = { task: 'Tasks', project: 'Projects', book: 'Books', quote: 
 const MAX_PER_GROUP = 8;
 const SEARCH_HINT = '↑↓ to navigate · ↵ to open · > for commands · esc to close';
 const COMMAND_HINT = '↑↓ to navigate · ↵ to run · esc to close';
+const PICKER_HINT = 'Type to filter · ↑↓ to navigate · ↵ to pick · esc to close';
 
 const el = {};
 let index = [];
 let renderedItems = [];
 let activeIndex = -1;
 let commands = [];
+let searchPlaceholder = ''; // from index.html, restored after a picker
+let picker = null; // while picking from a list (openPicker): { label, items, empty, typed }
 
 // Typing ">" first (VS Code style) turns search into the command palette.
 const isCommandMode = (term) => term.trimStart().startsWith('>');
@@ -31,6 +34,7 @@ function cacheElements() {
     commandBtn: document.getElementById('command-btn'),
     results: document.getElementById('search-results'),
   });
+  searchPlaceholder = el.input.placeholder;
 }
 
 function buildIndex({ tasks, projects, books, quotes, routines }) {
@@ -143,9 +147,34 @@ function renderCommands(query) {
   setActive(0);
 }
 
+// Picker: the items in their given order, filtered by what's typed. The
+// typed row (if any) comes after the matches, so enter still picks a real
+// one; with no matches it's the only row.
+function renderPicker(term) {
+  const q = term.trim().toLowerCase();
+  let matches = picker.items.filter((item) => item.title.toLowerCase().includes(q));
+  const extra = q && picker.typed ? picker.typed(term) : null;
+  if (extra) matches = [...matches, extra]; // every match contains q, so last (or alone)
+  if (!matches.length) {
+    renderHint(picker.empty);
+    return;
+  }
+  const label = document.createElement('div');
+  label.className = 'search-result-group-label';
+  label.textContent = picker.label;
+  el.results.appendChild(label);
+  matches.forEach((item) => renderRow({ ...item, type: 'command' }));
+  setActive(0);
+}
+
 function renderResults(term) {
   el.results.innerHTML = '';
   renderedItems = [];
+  if (picker) {
+    el.hint.textContent = PICKER_HINT;
+    renderPicker(term);
+    return;
+  }
   el.hint.textContent = isCommandMode(term) ? COMMAND_HINT : SEARCH_HINT;
   if (isCommandMode(term)) {
     renderCommands(term.trimStart().slice(1));
@@ -208,6 +237,8 @@ async function selectResult(item) {
 }
 
 export async function open(prefill = '') {
+  picker = null;
+  el.input.placeholder = searchPlaceholder;
   el.overlay.classList.add('open');
   el.input.value = prefill;
   commands = [];
@@ -229,8 +260,23 @@ export function openCommandPalette() {
   return open('>');
 }
 
+// The same box as a picker: items are { title, subtitle, run }, shown in
+// order under `label` and filtered by typing; picking one runs it.
+// typed(text) → an extra item for the text itself (or null), e.g. the focus
+// timer's "Focus on “job apps”".
+export function openPicker({ label, placeholder, items, empty = 'No matches.', typed = null }) {
+  picker = { label, items, empty, typed };
+  el.input.placeholder = placeholder;
+  el.input.value = '';
+  el.overlay.classList.add('open');
+  renderResults('');
+  el.input.focus();
+}
+
 function close() {
   el.overlay.classList.remove('open');
+  picker = null;
+  el.input.placeholder = searchPlaceholder;
 }
 
 export function initSearch() {

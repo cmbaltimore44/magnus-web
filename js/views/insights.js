@@ -1,18 +1,19 @@
 import { supabase } from '../supabaseClient.js';
+import * as tasksApi from '../data/tasks.js';
 import * as routinesApi from '../data/routines.js';
 import * as completionsApi from '../data/completions.js';
 import * as booksApi from '../data/books.js';
 import * as focusApi from '../data/focus.js';
 import * as logsApi from '../data/logs.js';
-import { completedByWeek, focusByWeek, routineRates, metricSeries, average, bookStats } from '../stats.js';
+import { completedByWeek, focusByWeek, focusByWhat, routineRates, metricSeries, average, bookStats } from '../stats.js';
 import { todayISO, addDays } from '../dates.js';
 import { statTiles, section, barList, columnChart, note } from '../charts.js';
 import { formatMinutes } from '../focus.js';
 import { showError } from '../toast.js';
 import { isMissingSchema, SCHEMA_003_HINT } from '../schema.js';
 
-// Insights: tasks finished per week, routine consistency, focus time, the
-// Log's mood/energy/sleep trends, and books finished this year.
+// Insights: tasks finished per week, routine consistency, focus time (and
+// what it went to), the Log's mood/energy/sleep trends, and books finished this year.
 
 const WEEKS = 8;
 const DAYS = 30;
@@ -67,8 +68,9 @@ function trendSection(title, entries, metric, today, { unit = '', max } = {}) {
 async function render() {
   const today = todayISO();
   const since = addDays(today, -(WEEKS * 7 + 7));
-  const [tasks, routines, completions, books, focus, log] = await Promise.all([
+  const [tasks, allTasks, routines, completions, books, focus, log] = await Promise.all([
     optional(listCompletedTasks()),
+    tasksApi.listTasks(),
     routinesApi.listRoutines(),
     completionsApi.listCompletions(),
     booksApi.listBooks(),
@@ -78,6 +80,7 @@ async function render() {
 
   const done = tasks.missing ? null : completedByWeek(tasks.data, today, WEEKS);
   const focusWeeks = focus.missing ? null : focusByWeek(focus.data, today, WEEKS);
+  const focusWhat = focus.missing ? null : focusByWhat(focus.data, allTasks, today, DAYS).slice(0, 6);
   const rates = routineRates(routines, completions, today, DAYS);
   const overallRate = rates.length ? rates.reduce((n, r) => n + r.rate, 0) / rates.length : null;
   const reading = bookStats(books, today);
@@ -112,6 +115,14 @@ async function render() {
         )
       : section('Focus minutes per week', SCHEMA_003_HINT)
   );
+
+  let byWhat = SCHEMA_003_HINT;
+  if (focusWhat) {
+    byWhat = focusWhat.length
+      ? barList(focusWhat.map((f) => ({ label: f.name, value: f.minutes, display: formatMinutes(f.minutes) })), { wide: true })
+      : 'No focus time in the last 30 days.';
+  }
+  el.body.appendChild(section('Focus by task or label · last 30 days', byWhat));
 
   el.body.appendChild(
     section(
