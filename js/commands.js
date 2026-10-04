@@ -101,13 +101,11 @@ function timerCommands() {
 export async function loadCommands() {
   let tasks = [];
   try {
-    tasks = await tasksApi.listTasks();
+    tasks = await tasksApi.listOpenTasks();
   } catch {
     // the rest of the palette still works
   }
-  const focus = tasks
-    .filter((t) => t.status !== 'done')
-    .map((t) => ({ label: `Focus: ${t.title}`, run: () => startFocus({ id: t.id, title: t.title }) }));
+  const focus = tasks.map((t) => ({ label: `Focus: ${t.title}`, run: () => startFocus({ id: t.id, title: t.title }) }));
   return [...staticCommands(), ...focus];
 }
 

@@ -1,12 +1,8 @@
 import { supabase } from '../supabaseClient.js';
+import { fetchAll } from './paging.js';
 
 export async function listBooks() {
-  const { data, error } = await supabase
-    .from('books')
-    .select('*')
-    .order('created_at', { ascending: false });
-  if (error) throw error;
-  return data;
+  return fetchAll(() => supabase.from('books').select('*').order('created_at', { ascending: false }).order('id', { ascending: true }));
 }
 
 export async function getBook(id) {

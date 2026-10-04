@@ -70,6 +70,7 @@ Visit the deployed URL from your phone's browser and sign in with the same email
 | `js/search.js` | Global search modal: builds a search index, renders grouped results, keyboard navigation; also the command palette and a list picker (`openPicker`) |
 | `js/voiceInput.js` | Wires mic buttons to the Web Speech API for dictating into notes/quote fields |
 | `js/data/*.js` | CRUD calls to Supabase for tasks, categories, routines, completions, projects, project tasks, books, quotes, and the global search index |
+| `js/data/paging.js` | `fetchAll`: reads a table page by page, since Supabase returns at most 1,000 rows per request (tasks, books, quotes, routine check-offs); a copy of Magnus's `src/lib/data/paging.js` |
 | `js/views/today.js` | Today dashboard: starred tasks, routines widget, quote widget |
 | `js/views/board.js` | Board rendering (desktop columns / mobile list), task and category modals, drag-and-drop |
 | `js/views/routines.js` | Routines checklist rendering, streaks, drag-and-drop |

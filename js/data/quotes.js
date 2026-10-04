@@ -1,22 +1,14 @@
 import { supabase } from '../supabaseClient.js';
+import { fetchAll } from './paging.js';
 
 export async function listQuotes() {
-  const { data, error } = await supabase
-    .from('quotes')
-    .select('*')
-    .order('created_at', { ascending: false });
-  if (error) throw error;
-  return data;
+  return fetchAll(() => supabase.from('quotes').select('*').order('created_at', { ascending: false }).order('id', { ascending: true }));
 }
 
 export async function listQuotesForBook(bookId) {
-  const { data, error } = await supabase
-    .from('quotes')
-    .select('*')
-    .eq('book_id', bookId)
-    .order('created_at', { ascending: false });
-  if (error) throw error;
-  return data;
+  return fetchAll(() =>
+    supabase.from('quotes').select('*').eq('book_id', bookId).order('created_at', { ascending: false }).order('id', { ascending: true })
+  );
 }
 
 export async function createQuote(userId, fields, sortOrder) {
@@ -45,11 +37,20 @@ export async function deleteQuote(id) {
   if (error) throw error;
 }
 
+// One random quote without downloading them all: count them, then fetch
+// just the one at a random position. If the count isn't available (e.g.
+// offline, where only plain reads are saved), pick from the full list.
+const QUOTE_COLS = 'id, quote_text, attribution, book_id';
 export async function pickRandomQuote() {
-  const { data, error } = await supabase.from('quotes').select('id, quote_text, attribution, book_id');
-  if (error) throw error;
-  if (!data.length) return null;
-  return data[Math.floor(Math.random() * data.length)];
+  const { count, error } = await supabase.from('quotes').select('id', { count: 'exact', head: true });
+  if (!error && typeof count === 'number') {
+    if (!count) return null;
+    const at = Math.floor(Math.random() * count);
+    const res = await supabase.from('quotes').select(QUOTE_COLS).order('id', { ascending: true }).range(at, at);
+    if (!res.error && res.data?.length) return res.data[0];
+  }
+  const all = await fetchAll(() => supabase.from('quotes').select(QUOTE_COLS).order('id', { ascending: true }));
+  return all.length ? all[Math.floor(Math.random() * all.length)] : null;
 }
 
 // Composes the display attribution from the book's *current* title rather

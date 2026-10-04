@@ -242,7 +242,7 @@ export async function refreshToday() {
     ]);
     // Only roll a new featured quote when there isn't one yet, so refocusing
     // the tab (which re-triggers this refresh) doesn't swap it out under you.
-    if (!quote) quote = await quotesApi.pickRandomQuote();
+    if (!quote) quote = await quotesApi.pickRandomQuote().catch(() => null); // no quote rather than no Today
   } catch (err) {
     showError(err);
     return;

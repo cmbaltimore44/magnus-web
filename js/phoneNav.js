@@ -3,6 +3,7 @@ import { getPhoneTabs } from './settings.js';
 import { groupUpcoming } from './stats.js';
 import { todayISO } from './dates.js';
 import { dueStatus } from './taskDisplay.js';
+import { fetchAll } from './data/paging.js';
 
 // Phone-width navigation (style.css hides all of this above 720px, where the
 // sidebar is used): a bottom tab bar with the 4 pinned sections (Settings →
@@ -39,12 +40,17 @@ async function rows(query) {
 
 // ---------- live numbers (one light query per table, only for tiles shown) ----------
 
+// Every count here ignores finished tasks, so only open ones are downloaded
+// (in pages: Supabase returns at most 1,000 rows per request).
+const openTasks = () =>
+  fetchAll(() => supabase.from('tasks').select('id, status, due_date, is_starred').neq('status', 'done').order('id', { ascending: true }));
+
 function makeLoaders() {
   const cache = {};
   const once = (key, fn) => (cache[key] ||= fn());
   const today = todayISO();
   return {
-    tasks: () => once('tasks', () => rows(supabase.from('tasks').select('status, due_date, is_starred'))),
+    tasks: () => once('tasks', openTasks),
     projects: () => once('projects', () => rows(supabase.from('projects').select('status, target_date'))),
     today,
   };
@@ -81,8 +87,8 @@ const COUNTS = {
     return `${items.filter((i) => !i.done).length} unchecked`;
   },
   library: async () => {
-    const books = await rows(supabase.from('books').select('status'));
-    return `${books.filter((b) => b.status === 'want_to_read').length} want to read`;
+    const books = await fetchAll(() => supabase.from('books').select('id').eq('status', 'want_to_read').order('id', { ascending: true }));
+    return `${books.length} want to read`;
   },
   log: async (d) => {
     const entries = await rows(supabase.from('log_entries').select('id').eq('entry_date', d.today).limit(1));

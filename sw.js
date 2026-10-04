@@ -28,6 +28,7 @@ const SHELL = [
   'js/data/focus.js',
   'js/data/lists.js',
   'js/data/logs.js',
+  'js/data/paging.js',
   'js/data/projects.js',
   'js/data/projectTasks.js',
   'js/data/quotes.js',

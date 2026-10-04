@@ -156,7 +156,7 @@ export async function initUpcoming() {
 export async function refreshUpcoming() {
   try {
     [tasks, projects, categories] = await Promise.all([
-      tasksApi.listTasks(),
+      tasksApi.listOpenTasks(), // Upcoming only shows open tasks
       projectsApi.listProjects(),
       categoriesApi.listCategories(),
     ]);

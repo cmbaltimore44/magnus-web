@@ -373,7 +373,7 @@ export async function openFocusPicker() {
   let sessions;
   try {
     [tasks, sessions] = await Promise.all([
-      tasksApi.listTasks(),
+      tasksApi.listOpenTasks(),
       focusApi.listFocusSessions(since).catch(() => []), // no schema_003 yet: no recent labels
     ]);
   } catch (err) {
@@ -382,7 +382,7 @@ export async function openFocusPicker() {
   }
   const current = timer;
   const choices = focusChoices({
-    tasks: tasks.filter((t) => t.status !== 'done'),
+    tasks,
     labels: focusApi.recentLabels(sessions),
     timer: current,
   });

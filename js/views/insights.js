@@ -5,6 +5,7 @@ import * as completionsApi from '../data/completions.js';
 import * as booksApi from '../data/books.js';
 import * as focusApi from '../data/focus.js';
 import * as logsApi from '../data/logs.js';
+import { fetchAll } from '../data/paging.js';
 import { completedByWeek, focusByWeek, focusByWhat, routineRates, metricSeries, average, bookStats } from '../stats.js';
 import { todayISO, addDays } from '../dates.js';
 import { statTiles, section, barList, columnChart, note } from '../charts.js';
@@ -31,9 +32,7 @@ async function optional(promise) {
 }
 
 async function listCompletedTasks() {
-  const { data, error } = await supabase.from('tasks').select('id, status, completed_at').eq('status', 'done');
-  if (error) throw error;
-  return data;
+  return fetchAll(() => supabase.from('tasks').select('id, status, completed_at').eq('status', 'done').order('id', { ascending: true }));
 }
 
 function shortDate(iso) {
@@ -72,7 +71,8 @@ async function render() {
     optional(listCompletedTasks()),
     tasksApi.listTasks(),
     routinesApi.listRoutines(),
-    completionsApi.listCompletions(),
+    // Only the last DAYS days are shown (no streaks here).
+    completionsApi.listCompletions({ since: addDays(today, -(DAYS - 1)), extendStreaks: false, today }),
     booksApi.listBooks(),
     optional(focusApi.listFocusSessions(new Date(since + 'T00:00:00').toISOString())),
     optional(logsApi.listLogEntries(addDays(today, -(DAYS - 1)), today)),
