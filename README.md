@@ -12,8 +12,9 @@ Live at <https://life-tracker-hq.vercel.app>.
 - **Projects**: a list of projects with status and target dates, each with its own notes and a checklist of sub-tasks.
 - **Lists**: groceries, a wish list, packing… Checkable items with an optional link and price (the list totals what's left to buy); checked items collect in a collapsed group with a one-tap "Clear checked". Quick add `+groceries oat milk` adds straight to a list. Needs [`supabase/schema_004.sql`](supabase/schema_004.sql).
 - **Library**: track books you're reading (status, format, dates, rating, cover image, notes) and collect highlights/quotes from them, plus standalone quotes — with a favorites filter. Quick add `book: Piranesi by Susanna Clarke` (or `b: dune`, or an ISBN) puts a book on Want to Read straight away and fills in the author and cover from Open Library when there's one clear match. The **Want to Read** tab is a compact, ordered reading queue: one line per book ("Up next" is the first three), reorder by drag or the ↑/↓ buttons, filter, a rapid add box, and a "?" on books still missing an author or cover that runs the Open Library lookup. "Start" (there, or in the book editor) moves a book to Reading, started today, with Undo.
+- **Adding quotes on a phone**: the quote editor is a full-screen sheet (Cancel / Save at the top) with large text that stays above the keyboard. It suggests the 🎤 on the iOS keyboard for dictation instead of the app's own Dictate button. **Check against page** compares the quote with the printed page: tap the Page text box, choose Scan Text (or the keyboard's scan icon), point the camera at the passage and tap Insert. No photo is saved, and on a computer you can paste the text instead. The differences are highlighted in the quote; tap one to take the page's version, or **Use page text for all**. Quotes, dashes, line breaks and words hyphenated across lines don't count as differences; case and punctuation do. The page text is only used for the comparison and is never saved.
 - **Global search**: press `Cmd`/`Ctrl`+`K` or tap the floating search button to jump straight to any task, project, book, quote, or routine.
-- **Voice-to-text**: a dictation button (Web Speech API) on notes and quote fields, handy on mobile.
+- **Voice-to-text**: a dictation button (Web Speech API) on notes and quote fields (on phones the quote editor points to the keyboard's own dictation instead).
 - **Toast notifications**: success/error/info toasts for background actions, plus a non-blocking confirmation toast (instead of the browser's native popup) before anything is deleted.
 - Light/dark mode toggle, styled in a warm cream-and-terracotta palette (dark mode: warm charcoal).
 - Sign in with a one-time email code (no password). Your data lives in Supabase and follows you between your computer and phone.
@@ -76,7 +77,9 @@ Visit the deployed URL from your phone's browser and sign in with the same email
 | `js/views/routines.js` | Routines checklist rendering, streaks, drag-and-drop |
 | `js/views/projects.js` | Projects list and detail panel, checklist items |
 | `js/views/lists.js` | Lists: the lists and the open list side by side (one at a time on phones), items, Clear checked |
-| `js/views/library.js` | Books list/detail, highlights, and the standalone quotes tab |
+| `js/views/library.js` | Books list/detail, highlights, the standalone quotes tab, and the quote editor (phone sheet, Check against page) |
+| `js/quoteCheck.js` | Check against page: compares a dictated quote with scanned page text word by word and applies the page's version (pure, no DOM) |
+| `test/` | Unit tests for the pure modules (`npm test`, Node's built-in test runner; no install needed) |
 | `supabase/schema.sql`, `supabase/schema_002.sql` | Database schema + Row Level Security policies |
 | `supabase/import_electron_data.sql` | Optional one-off migration from the original Electron app's local data |
 | `scripts/generate-icon.py` | Regenerates `build/icon.png` / `build/icon.icns` from a Pillow-drawn design |

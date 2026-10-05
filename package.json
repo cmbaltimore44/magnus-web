@@ -1,11 +1,12 @@
 {
   "name": "life-tracker",
   "version": "3.0.0",
-  "description": "A personal life tracker — tasks, routines, projects, and a book/quote library, synced across devices via Supabase.",
+  "description": "A personal life tracker \u2014 tasks, routines, projects, and a book/quote library, synced across devices via Supabase.",
   "author": "cmbaltimore44",
   "license": "UNLICENSED",
   "private": true,
   "scripts": {
-    "dev": "npx serve ."
+    "dev": "npx serve .",
+    "test": "node --test test/"
   }
 }

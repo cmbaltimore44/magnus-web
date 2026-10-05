@@ -787,43 +787,66 @@
     </div>
   </div>
 
-  <!-- Quote modal (used for book highlights and standalone quotes) -->
+  <!-- Quote modal (used for book highlights and standalone quotes). On phone
+       widths it's a full-screen sheet with Cancel / Save in the header. -->
   <div class="modal-overlay" id="quote-modal-overlay">
-    <div class="modal">
+    <div class="modal quote-modal">
       <div class="modal-header">
+        <button type="button" class="sheet-btn" id="quote-sheet-cancel">Cancel</button>
         <h3 id="quote-modal-title">New Quote</h3>
         <button class="icon-btn" id="quote-modal-close">&times;</button>
+        <button type="submit" class="sheet-btn sheet-btn-primary" form="quote-form">Save</button>
       </div>
       <form id="quote-form">
         <input type="hidden" id="quote-id" />
 
-        <label class="field" id="quote-book-field">
-          <span>Book</span>
-          <select id="quote-book">
-            <option value="">(standalone quote, no book)</option>
-          </select>
-        </label>
+        <div class="quote-editor" id="quote-editor">
+          <label class="field quote-text-field">
+            <span>Quote<button type="button" class="voice-btn" data-voice-target="quote-text" title="Dictate" aria-label="Dictate"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z"/><path d="M19 11a7 7 0 0 1-14 0"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg></button><small class="dictate-hint">Tip: use the 🎤 on the keyboard to dictate.</small></span>
+            <textarea id="quote-text" rows="4" required></textarea>
+          </label>
+          <button type="button" class="btn btn-ghost quote-check-btn" id="quote-check-btn" hidden>Check against page</button>
+        </div>
 
-        <label class="field">
-          <span>Quote<button type="button" class="voice-btn" data-voice-target="quote-text" title="Dictate" aria-label="Dictate"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z"/><path d="M19 11a7 7 0 0 1-14 0"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg></button></span>
-          <textarea id="quote-text" rows="4" required></textarea>
-        </label>
+        <!-- Check against page: compares the quote with scanned page text.
+             The page text stays in this box only; it's never saved. -->
+        <div class="quote-check" id="quote-check" hidden>
+          <p class="quote-check-help">Tap the box below, choose Scan Text (or the scan icon on the keyboard), point the camera at the passage, then tap Insert.</p>
+          <label class="field">
+            <span>Page text</span>
+            <textarea id="quote-page-text" rows="4" autocomplete="off" spellcheck="false"></textarea>
+          </label>
+          <div class="quote-check-result" id="quote-check-result" aria-live="polite"></div>
+          <div class="quote-check-actions">
+            <button type="button" class="btn btn-ghost" id="quote-check-all" hidden>Use page text for all</button>
+            <button type="button" class="btn btn-primary" id="quote-check-done">Done</button>
+          </div>
+        </div>
 
-        <label class="field">
-          <span id="quote-attribution-label">Attribution / location</span>
-          <input type="text" id="quote-attribution" placeholder="e.g. Location 177, or — Author Name" autocomplete="off" />
-        </label>
+        <div class="quote-details" id="quote-details">
+          <label class="field" id="quote-book-field">
+            <span>Book</span>
+            <select id="quote-book">
+              <option value="">(standalone quote, no book)</option>
+            </select>
+          </label>
 
-        <label class="field checkbox-field">
-          <input type="checkbox" id="quote-favorite" />
-          <span>Favorite</span>
-        </label>
+          <label class="field">
+            <span id="quote-attribution-label">Attribution / location</span>
+            <input type="text" id="quote-attribution" placeholder="e.g. Location 177, or — Author Name" autocomplete="off" />
+          </label>
 
-        <div class="modal-actions">
-          <button type="button" class="btn btn-danger" id="quote-delete-btn" hidden>Delete</button>
-          <div class="modal-actions-right">
-            <button type="button" class="btn btn-ghost" id="quote-cancel-btn">Cancel</button>
-            <button type="submit" class="btn btn-primary">Save</button>
+          <label class="field checkbox-field">
+            <input type="checkbox" id="quote-favorite" />
+            <span>Favorite</span>
+          </label>
+
+          <div class="modal-actions">
+            <button type="button" class="btn btn-danger" id="quote-delete-btn" hidden>Delete</button>
+            <div class="modal-actions-right">
+              <button type="button" class="btn btn-ghost" id="quote-cancel-btn">Cancel</button>
+              <button type="submit" class="btn btn-primary">Save</button>
+            </div>
           </div>
         </div>
       </form>

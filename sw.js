@@ -49,6 +49,7 @@ const SHELL = [
   'js/pomodoro.js',
   'js/quickAdd.js',
   'js/quickAddBar.js',
+  'js/quoteCheck.js',
   'js/resilientFetch.js',
   'js/schema.js',
   'js/search.js',

@@ -10,6 +10,7 @@ import { todayISO } from '../dates.js';
 import { statTiles, section, barList } from '../charts.js';
 import { addWantToRead, needsDetails, nextWantOrder } from '../bookQuickAdd.js';
 import { parseBookText } from '../quickAdd.js';
+import { compareQuote, applyDiff } from '../quoteCheck.js';
 
 const BOOK_GROUPS = [
   { key: 'reading', label: 'Currently Reading', collapsible: false },
@@ -121,6 +122,16 @@ function cacheElements() {
     quoteFavorite: document.getElementById('quote-favorite'),
     quoteDeleteBtn: document.getElementById('quote-delete-btn'),
     quoteCancelBtn: document.getElementById('quote-cancel-btn'),
+    quoteModal: document.querySelector('#quote-modal-overlay .quote-modal'),
+    quoteSheetCancel: document.getElementById('quote-sheet-cancel'),
+    quoteEditor: document.getElementById('quote-editor'),
+    quoteDetails: document.getElementById('quote-details'),
+    quoteCheckBtn: document.getElementById('quote-check-btn'),
+    quoteCheck: document.getElementById('quote-check'),
+    quotePageText: document.getElementById('quote-page-text'),
+    quoteCheckResult: document.getElementById('quote-check-result'),
+    quoteCheckAll: document.getElementById('quote-check-all'),
+    quoteCheckDone: document.getElementById('quote-check-done'),
   });
 }
 
@@ -885,14 +896,139 @@ function openQuoteModal({ quote = null, context, bookId = null } = {}) {
 
   el.quoteFavorite.checked = quote ? !!quote.is_favorite : false;
   el.quoteDeleteBtn.hidden = !quote;
+  resetQuoteCheck();
   el.quoteModalOverlay.classList.add('open');
+  fitQuoteSheet();
   el.quoteText.focus();
 }
 
 function closeQuoteModal() {
   el.quoteModalOverlay.classList.remove('open');
+  el.quoteModal.classList.remove('typing');
   editingQuoteId = null;
+  resetQuoteCheck();
   stopVoiceInput();
+}
+
+// ---------- quote editor on phones ----------
+// A full-screen sheet (style.css). The iOS keyboard covers the page rather
+// than resizing it, so the sheet follows window.visualViewport, and while
+// the keyboard is up for the quote itself the other fields step aside.
+
+const phoneWidth = window.matchMedia('(max-width: 720px)');
+
+function fitQuoteSheet() {
+  const vv = window.visualViewport;
+  if (!vv || !el.quoteModalOverlay.classList.contains('open')) return;
+  el.quoteModal.style.setProperty('--vv-top', `${vv.offsetTop}px`);
+  el.quoteModal.style.setProperty('--vv-height', `${vv.height}px`);
+  const keyboardUp = window.innerHeight - vv.height > 120;
+  el.quoteModal.classList.toggle('typing', phoneWidth.matches && keyboardUp && document.activeElement === el.quoteText);
+}
+
+// ---------- check against page ----------
+// The user scans the printed page into "Page text" (iOS Scan Text, or paste)
+// and taps each difference to take the page's version (js/quoteCheck.js).
+// The page text lives only in that box: it's never saved, and it's cleared
+// when the quote editor closes.
+
+let quoteCheckResult = null;
+
+function syncQuoteCheckBtn() {
+  el.quoteCheckBtn.hidden = !el.quoteText.value.trim();
+}
+
+function openQuoteCheck() {
+  el.quoteEditor.hidden = true;
+  el.quoteDetails.hidden = true;
+  el.quoteCheck.hidden = false;
+  renderQuoteCheck();
+}
+
+function closeQuoteCheck() {
+  el.quoteCheck.hidden = true;
+  el.quoteEditor.hidden = false;
+  el.quoteDetails.hidden = false;
+  syncQuoteCheckBtn();
+}
+
+function resetQuoteCheck() {
+  closeQuoteCheck();
+  el.quotePageText.value = '';
+  el.quoteCheckResult.replaceChildren();
+  quoteCheckResult = null;
+}
+
+function quoteCheckNote(text, className = '') {
+  const p = document.createElement('p');
+  p.className = `quote-check-status ${className}`.trim();
+  p.textContent = text;
+  return p;
+}
+
+function quoteDiffButton(diff, quote) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = diff.kind === 'case' ? 'qc-diff qc-diff-case' : 'qc-diff';
+  if (diff.dictated) {
+    const del = document.createElement('del');
+    del.textContent = diff.dictated;
+    btn.appendChild(del);
+  }
+  if (diff.page) {
+    const ins = document.createElement('ins');
+    ins.textContent = diff.page;
+    btn.appendChild(ins);
+  }
+  const label = !diff.dictated ? `Add “${diff.page}”` : !diff.page ? `Remove “${diff.dictated}”` : `Replace “${diff.dictated}” with “${diff.page}”`;
+  btn.title = label;
+  btn.setAttribute('aria-label', label);
+  btn.addEventListener('click', () => {
+    const at = [...el.quoteCheckResult.querySelectorAll('.qc-diff')].indexOf(btn);
+    el.quoteText.value = applyDiff(quote, diff);
+    renderQuoteCheck();
+    // Keep the place: focus the next difference, if there is one.
+    const next = el.quoteCheckResult.querySelectorAll('.qc-diff')[at];
+    (next || el.quoteCheckDone).focus({ preventScroll: true });
+  });
+  return btn;
+}
+
+function renderQuoteCheck() {
+  const box = el.quoteCheckResult;
+  box.replaceChildren();
+  el.quoteCheckAll.hidden = true;
+  quoteCheckResult = null;
+  if (!el.quotePageText.value.trim()) return;
+
+  const quote = el.quoteText.value;
+  const result = compareQuote(quote, el.quotePageText.value);
+  if (!result.matched) {
+    box.appendChild(quoteCheckNote('The page text doesn’t match the quote. Check that the scan has the right passage.'));
+    return;
+  }
+  quoteCheckResult = result;
+  if (!result.diffs.length) {
+    box.appendChild(quoteCheckNote('Matches the page ✓', 'matches'));
+    return;
+  }
+  const n = result.diffs.length;
+  box.appendChild(quoteCheckNote(`${n} difference${n === 1 ? '' : 's'}. Tap one to use the page’s version.`));
+  const text = document.createElement('p');
+  text.className = 'quote-check-text';
+  for (const seg of result.segments) {
+    if (seg.diff) text.appendChild(quoteDiffButton(seg.diff, quote));
+    else text.append(seg.text);
+  }
+  box.appendChild(text);
+  el.quoteCheckAll.hidden = false;
+}
+
+function useAllPageText() {
+  if (!quoteCheckResult) return;
+  el.quoteText.value = quoteCheckResult.passage;
+  renderQuoteCheck();
+  el.quoteCheckDone.focus({ preventScroll: true });
 }
 
 async function handleQuoteSubmit(e) {
@@ -1028,6 +1164,19 @@ export async function initLibrary(uid) {
   el.quoteDeleteBtn.addEventListener('click', handleQuoteDelete);
   el.quoteModalClose.addEventListener('click', closeQuoteModal);
   el.quoteCancelBtn.addEventListener('click', closeQuoteModal);
+  el.quoteSheetCancel.addEventListener('click', closeQuoteModal);
+  el.quoteText.addEventListener('input', syncQuoteCheckBtn);
+  el.quoteCheckBtn.addEventListener('click', openQuoteCheck);
+  el.quotePageText.addEventListener('input', renderQuoteCheck);
+  el.quoteCheckAll.addEventListener('click', useAllPageText);
+  el.quoteCheckDone.addEventListener('click', () => {
+    closeQuoteCheck();
+    el.quoteCheckBtn.focus({ preventScroll: true });
+  });
+  window.visualViewport?.addEventListener('resize', fitQuoteSheet);
+  window.visualViewport?.addEventListener('scroll', fitQuoteSheet);
+  el.quoteModal.addEventListener('focusin', fitQuoteSheet);
+  el.quoteModal.addEventListener('focusout', () => requestAnimationFrame(fitQuoteSheet));
   el.quoteModalOverlay.addEventListener('click', (e) => {
     if (e.target === el.quoteModalOverlay) closeQuoteModal();
   });
