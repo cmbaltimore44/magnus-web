@@ -5,7 +5,7 @@
 // the book is saved straight away, then filled in from Open Library in the
 // background when there's one clear match (lib/openlibrary.js clearMatch).
 // An ISBN is looked up first, since it says nothing on its own.
-// The Life Tracker web app has a copy (js/bookQuickAdd.js) — keep in sync.
+// The Magnus Web app has a copy (js/bookQuickAdd.js) — keep in sync.
 import * as booksApi from './data/books.js';
 import { lookupBooks, clearMatch, enrichmentFields } from './openLibrary.js';
 const cleanDeep = (value) => value;

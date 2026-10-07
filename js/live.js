@@ -32,7 +32,7 @@ export function initLiveUpdates(refresh, canRefresh) {
     if (channel) return;
     try {
       const ch = supabase
-        .channel('life-tracker-live')
+        .channel('magnus-web-live')
         .on('postgres_changes', { event: '*', schema: 'public' }, schedule)
         .subscribe((status) => {
           if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {

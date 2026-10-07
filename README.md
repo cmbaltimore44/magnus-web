@@ -1,8 +1,12 @@
-# Life Tracker
+# Magnus Web
 
-A personal life tracker — tasks, routines, projects, and a book/quote library — a plain HTML/CSS/JS web app (no build step, no framework) that syncs your data across devices via [Supabase](https://supabase.com).
+The web and phone side of [Magnus](https://github.com/cmbaltimore44/magnus): a personal life tracker — tasks, routines, projects, lists, a daily log, and a book/quote library — as a plain HTML/CSS/JS web app (no build step, no framework) that syncs your data across devices via [Supabase](https://supabase.com).
 
-Live at <https://life-tracker-hq.vercel.app>.
+It's a personal tool, published as-is: the author's own instance runs at
+<https://magnus-web-hq.vercel.app> (sign-ups are closed). To use it yourself,
+set up your own Supabase project and deploy your own copy, as described below.
+Magnus, the terminal app, reads and writes the same data. (This app was
+previously called Life Tracker.)
 
 ## Features
 
@@ -23,11 +27,10 @@ Live at <https://life-tracker-hq.vercel.app>.
 ## One-time setup (Supabase)
 
 1. Create a free project at [supabase.com](https://supabase.com/dashboard).
-2. In the SQL Editor, run [`supabase/schema.sql`](supabase/schema.sql), then [`supabase/schema_002.sql`](supabase/schema_002.sql). Together they create the `categories`, `tasks`, `routines`, `routine_completions`, `projects`, `project_tasks`, `books`, and `quotes` tables, all with Row Level Security so each signed-in user only ever sees their own rows.
-   - `supabase/import_electron_data.sql` is a one-off migration script for importing data from the original Electron/localStorage version of this app — most people can ignore it.
+2. In the SQL Editor, run the files in [`supabase/`](supabase/) in order: `schema.sql`, then `schema_002.sql` through `schema_006.sql`. Together they create every table (tasks, categories, routines, projects, books, quotes, lists, the daily log, focus sessions, …), all with Row Level Security so each signed-in user only ever sees their own rows.
 3. In Settings → API, copy your **Project URL** and **anon public key**.
-4. Paste them into `js/supabaseClient.js` (`SUPABASE_URL` / `SUPABASE_ANON_KEY`). The anon key is meant to be public — RLS is what actually protects the data, not the key.
-5. Email auth (with OTP codes) is on by default — nothing else to configure.
+4. Replace the values in `js/supabaseClient.js` (`SUPABASE_URL` / `SUPABASE_ANON_KEY`) with yours; the repo ships with the author's. The anon key is meant to be public — RLS is what actually protects the data, not the key. Never put the `service_role` key in this app.
+5. Create your account under Authentication → Users → **Add user**. The app only signs existing users in with an emailed code and never creates accounts, so also turn off **Allow new users to sign up** (Authentication → Sign In / Providers) to keep strangers from registering against your project.
 
 ## Running locally
 
@@ -61,8 +64,8 @@ Visit the deployed URL from your phone's browser and sign in with the same email
 | `js/focusPicker.js` | What the focus timer's picker offers (starred tasks, recent labels, open tasks, the typed text); a port of Magnus's `src/lib/focusPicker.js` without the journal |
 | `js/pomodoro.js` | Pure Pomodoro engine; a copy of Magnus's `src/lib/pomodoro.js` — keep the two identical |
 | `js/phoneNav.js` | Phone-width navigation: bottom tab bar (4 sections, chosen in Settings) and the More sheet with live counts |
-| `js/supabaseClient.js` | Supabase client init — put your project URL/anon key here |
-| `js/auth.js` | Email OTP sign-in/out |
+| `js/supabaseClient.js` | Supabase client init — replace the project URL/anon key with yours |
+| `js/auth.js` | Email OTP sign-in/out (existing users only) |
 | `js/theme.js` | Light/dark theme toggle |
 | `js/migrate.js` | One-time import of old localStorage data into Supabase |
 | `js/hash.js` | Small helper for parsing the `#/a/b/c` hash route into segments |
@@ -80,8 +83,7 @@ Visit the deployed URL from your phone's browser and sign in with the same email
 | `js/views/library.js` | Books list/detail, highlights, the standalone quotes tab, and the quote editor (phone sheet, Check against page) |
 | `js/quoteCheck.js` | Check against page: compares a dictated quote with scanned page text word by word and applies the page's version (pure, no DOM) |
 | `test/` | Unit tests for the pure modules (`npm test`, Node's built-in test runner; no install needed) |
-| `supabase/schema.sql`, `supabase/schema_002.sql` | Database schema + Row Level Security policies |
-| `supabase/import_electron_data.sql` | Optional one-off migration from the original Electron app's local data |
+| `supabase/schema*.sql` | Database schema + Row Level Security policies (run in order) |
 | `scripts/generate-icon.py` | Regenerates `build/icon.png` / `build/icon.icns` from a Pillow-drawn design |
 | `build/icon.icns`, `build/icon.png` | App icon, reused as the favicon / home-screen icon |
 
@@ -98,9 +100,9 @@ This writes `build/icon-source.png` (1024×1024 master), `build/icon.png` (512×
 
 ## Themes
 
-Color themes (Hearth — the original Life Tracker palette — Heather, Lakeglow, Beacon) are shared with the
-Magnus terminal app. `themes.css` and `js/palettes.js` are **generated** in
-the Magnus repo (`npm run themes:web`); don't edit them by hand.
+Color themes (Hearth — this app's original palette — Heather, Lakeglow, Beacon) are shared with the
+[Magnus](https://github.com/cmbaltimore44/magnus) terminal app. `themes.css` and `js/palettes.js` are **generated** in
+the Magnus repo (`npm run themes:web`, with this repo checked out next to it); don't edit them by hand.
 `js/theme-boot.js` applies the saved theme and light/dark mode (Auto follows
 the system setting) before first paint.
 It also swaps the app icon to match the theme. `icons/` (one set per theme)
@@ -109,3 +111,7 @@ which the Magnus `npm run themes:web` runs automatically. The browser-tab
 icon updates live. iOS only reads the home-screen icon when you "Add to Home
 Screen", so re-add the app to pick up a new theme's icon there. The picker and toggle live in the
 sidebar footer.
+
+## License
+
+[MIT](LICENSE).

@@ -14,7 +14,7 @@ import { parseDateInput } from './dates.js';
 //   "groceries" (Lists, schema_004); an unknown list name is reported, not guessed.
 // Words that look like tokens but don't resolve (an unknown #tag, a date
 // word that isn't a date) stay in the title, so nothing is silently lost.
-// The Life Tracker web app has a copy of this file (js/quickAdd.js); keep
+// The Magnus Web app has a copy of this file (js/quickAdd.js); keep
 // the two in sync.
 
 const PRIORITY = { h: 'high', high: 'high', m: 'medium', med: 'medium', medium: 'medium', l: 'low', low: 'low' };

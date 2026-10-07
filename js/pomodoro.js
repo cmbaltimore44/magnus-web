@@ -1,7 +1,7 @@
 // COPY of magnus/src/lib/pomodoro.js (~/Development/magnus). Keep the two
 // files identical below this block: change both, or neither.
 //
-// Pomodoro engine shared by Magnus and the web app (Life Tracker has a copy,
+// Pomodoro engine shared by Magnus and the web app (Magnus Web has a copy,
 // js/pomodoro.js — keep the two in sync). Pure functions over a plain,
 // JSON-safe timer object, so it can be saved (prefs.json / localStorage)
 // and survive restarts.

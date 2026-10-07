@@ -155,7 +155,7 @@ function askNotificationPermission() {
 async function notify(title, body) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   const icon = document.querySelector('link[rel="apple-touch-icon"]')?.href;
-  const options = { body, tag: 'life-tracker-focus', renotify: true, ...(icon ? { icon } : {}) };
+  const options = { body, tag: 'magnus-web-focus', renotify: true, ...(icon ? { icon } : {}) };
   try {
     // Home-screen apps on iOS only support notifications via the service worker.
     const reg = navigator.serviceWorker && (await navigator.serviceWorker.getRegistration());

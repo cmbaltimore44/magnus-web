@@ -1,6 +1,6 @@
 {
-  "name": "Life Tracker",
-  "short_name": "Life Tracker",
+  "name": "Magnus Web",
+  "short_name": "Magnus Web",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#211c18",

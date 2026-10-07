@@ -1,7 +1,45 @@
+# Dependencies
 node_modules/
-*.log
-.DS_Store
-.vercel
+__pycache__/
+*.pyc
+
+# Secrets: never commit keys or tokens (the Supabase anon key in
+# js/supabaseClient.js is public by design; a service_role key must never be here)
 .env
-.env.local
+.env.*
+!.env.example
+*.local
+.npmrc
+*.pem
+*.key
+*.p12
+service-account*.json
+supabase/.temp/
+supabase/.branches/
+
+# Deployment (holds the Vercel project and org IDs)
+.vercel
+
+# Personal data: migration of the old app's data, exports and backups
 supabase/import_electron_data.sql
+supabase/*data*.sql
+supabase/seed*.sql
+*.dump
+*.backup
+*.sqlite
+*.sqlite3
+*.db
+*.csv
+backups/
+exports/
+
+# Logs and editor/OS clutter
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*~
+.claude/

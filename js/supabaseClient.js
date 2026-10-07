@@ -2,7 +2,8 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import { resilientFetch } from './resilientFetch.js';
 import { makeOfflineFetch, useStoredSessionWhenOffline } from './offline.js';
 
-// Fill these in from your Supabase project's Settings -> API page.
+// To run your own copy, replace these with your Supabase project's values
+// (Settings -> API) and load supabase/schema*.sql in order.
 // The anon key is meant to be public — access is enforced by Row Level
 // Security policies on each table, not by keeping this secret.
 const SUPABASE_URL = 'https://jzucxygvjqywxznderfc.supabase.co';

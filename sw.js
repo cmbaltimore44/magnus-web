@@ -7,7 +7,7 @@
 // js/offline.js. Bump VERSION to drop old caches (not needed for updates,
 // which arrive through the network anyway).
 const VERSION = 'v1';
-const CACHE = `life-tracker-shell-${VERSION}`;
+const CACHE = `magnus-web-shell-${VERSION}`;
 
 // Saved at install so even the first offline open works. Anything missing
 // from this list is still cached the first time it's fetched online.
@@ -104,7 +104,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k.startsWith('life-tracker-shell-') && k !== CACHE).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => (k.startsWith('magnus-web-shell-') || k.startsWith('life-tracker-shell-')) && k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });

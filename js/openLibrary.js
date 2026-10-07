@@ -1,7 +1,7 @@
 // Copy of Magnus's src/lib/openlibrary.js — keep the two in sync.
 // Open Library lookups for adding books: by ISBN, or a title/author search.
 // No API key needed. Returns plain book fields ready for the book form.
-// The Life Tracker web app has a copy (js/openLibrary.js) — keep in sync.
+// The Magnus Web app has a copy (js/openLibrary.js) — keep in sync.
 
 const BASE = 'https://openlibrary.org';
 

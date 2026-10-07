@@ -1,9 +1,9 @@
 {
-  "name": "life-tracker",
+  "name": "magnus-web",
   "version": "3.0.0",
-  "description": "A personal life tracker \u2014 tasks, routines, projects, and a book/quote library, synced across devices via Supabase.",
+  "description": "Magnus Web: a personal life tracker \u2014 tasks, routines, projects, and a book/quote library, synced across devices via Supabase.",
   "author": "cmbaltimore44",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "dev": "npx serve .",
