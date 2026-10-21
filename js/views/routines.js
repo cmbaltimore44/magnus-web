@@ -1,6 +1,7 @@
 import * as routinesApi from '../data/routines.js';
 import * as completionsApi from '../data/completions.js';
 import { showError } from '../toast.js';
+import { renderYesterdayChip, yesterdayISO } from '../yesterdayChip.js';
 import { deleteWithUndo } from '../undo.js';
 
 const GROUPS = ['morning', 'afternoon', 'evening'];
@@ -153,6 +154,8 @@ function renderRow(routine) {
     row.appendChild(streakBadge);
   }
 
+  row.appendChild(renderYesterdayChip(dates, (checked) => toggleCompletion(routine, checked, yesterdayISO())));
+
   const remove = document.createElement('button');
   remove.className = 'routine-remove';
   remove.textContent = '×';
@@ -169,16 +172,16 @@ function renderRow(routine) {
   return row;
 }
 
-async function toggleCompletion(routine, checked) {
-  const today = completionsApi.todayISO();
+// day: today, or yesterday from the chip on the row.
+async function toggleCompletion(routine, checked, day = completionsApi.todayISO()) {
   const dates = completions.get(routine.id) || new Set();
   try {
     if (checked) {
-      await completionsApi.markComplete(userId, routine.id, today);
-      dates.add(today);
+      await completionsApi.markComplete(userId, routine.id, day);
+      dates.add(day);
     } else {
-      await completionsApi.markIncomplete(routine.id, today);
-      dates.delete(today);
+      await completionsApi.markIncomplete(routine.id, day);
+      dates.delete(day);
     }
     completions.set(routine.id, dates);
     renderGroup(routine.time_of_day);

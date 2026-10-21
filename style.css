@@ -3001,3 +3001,27 @@ input, textarea, select, button {
   list-style: none;
   font-weight: 550;
 }
+
+/* Check off a routine for yesterday (js/yesterdayChip.js). */
+.routine-yesterday {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.routine-yesterday:hover { border-color: var(--text-muted); color: var(--text); }
+.routine-yesterday.done {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--bg);
+}
+@media (pointer: coarse) {
+  .routine-yesterday { min-height: 28px; padding: 4px 8px; }
+}

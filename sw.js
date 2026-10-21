@@ -73,6 +73,7 @@ const SHELL = [
   'js/views/today.js',
   'js/views/upcoming.js',
   'js/voiceInput.js',
+  'js/yesterdayChip.js',
   'icons/beacon-180.png',
   'icons/beacon-favicon.png',
   'icons/beacon.png',
