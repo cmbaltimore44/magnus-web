@@ -10,7 +10,9 @@ previously called Life Tracker.)
 
 ## Features
 
-- **Today**: your top 3 starred tasks, today's routines, and a quote widget, all on one dashboard.
+- **Today**: your top 3 starred tasks, today's routines, and a quote widget, all on one dashboard. From 5 pm a **Done for today** button closes the day, so the evening "Close the day?" notification doesn't come (it reads "Day closed · Undo" afterwards; needs [`supabase/schema_007.sql`](supabase/schema_007.sql)).
+- **Repeating tasks**: quick add `pay rent ~1st`, `call mom ~sun`, `standup ~weekdays`, `water plants ~3d` (also `~mon,thu`, `~last`, `~weekly`, `~monthly`, `~yearly`, `~2w`, `~6m`), or the task form's **Repeat** field, which says what it understood ("Repeats every Monday and Thursday"). A ↻ marks them. Marking one done makes the next one, due the next matching day after the old due date; the database does it, so it works the same from Magnus and from older versions of either app. Moving it back out of Done (or Undo) takes that next one back, unless you've already edited, started or starred it. Needs [`supabase/schema_008.sql`](supabase/schema_008.sql).
+- **Notifications** (optional, set up from Magnus with `magnus notify setup`): a morning brief, a "Close the day?" nudge in the evening and a Sunday "Plan your week" reminder, sent by the database itself (pg_cron → [ntfy.sh](https://ntfy.sh)) so they reach the phone even when no computer is on. Subscribe to your private topic in the ntfy app.
 - **Board**: three columns (To Do, In Progress, Done) with drag-and-drop on desktop; on mobile the same tasks render as a single stacked, scrollable list (touch devices can't drag-and-drop), and every task has a Status dropdown as a non-drag way to move it between columns. Categories with colors, due dates with overdue/soon-due highlighting, priority levels, notes, search, and filtering.
 - **Routines**: daily habits grouped into Morning / Afternoon / Evening checklists, with streak tracking and drag-to-reorder.
 - **Projects**: a list of projects with status and target dates, each with its own notes and a checklist of sub-tasks.
@@ -27,7 +29,7 @@ previously called Life Tracker.)
 ## One-time setup (Supabase)
 
 1. Create a free project at [supabase.com](https://supabase.com/dashboard).
-2. In the SQL Editor, run the files in [`supabase/`](supabase/) in order: `schema.sql`, then `schema_002.sql` through `schema_006.sql`. Together they create every table (tasks, categories, routines, projects, books, quotes, lists, the daily log, focus sessions, …), all with Row Level Security so each signed-in user only ever sees their own rows.
+2. In the SQL Editor, run the files in [`supabase/`](supabase/) in order: `schema.sql`, then `schema_002.sql` through `schema_008.sql`. Together they create every table (tasks, categories, routines, projects, books, quotes, lists, the daily log, focus sessions, notification settings, …), all with Row Level Security so each signed-in user only ever sees their own rows. `schema_007.sql` turns on the `pg_cron` and `pg_net` extensions and schedules the notification job (it sends nothing until a user runs `magnus notify setup`); `schema_008.sql` adds repeating tasks. Magnus's [`MIGRATIONS.md`](https://github.com/cmbaltimore44/magnus/blob/main/MIGRATIONS.md) explains each file and how to remove it.
 3. In Settings → API, copy your **Project URL** and **anon public key**.
 4. Replace the values in `js/supabaseClient.js` (`SUPABASE_URL` / `SUPABASE_ANON_KEY`) with yours; the repo ships with the author's. The anon key is meant to be public — RLS is what actually protects the data, not the key. Never put the `service_role` key in this app.
 5. Create your account under Authentication → Users → **Add user**. The app only signs existing users in with an emailed code and never creates accounts, so also turn off **Allow new users to sign up** (Authentication → Sign In / Providers) to keep strangers from registering against your project.
@@ -69,21 +71,23 @@ Visit the deployed URL from your phone's browser and sign in with the same email
 | `js/theme.js` | Light/dark theme toggle |
 | `js/migrate.js` | One-time import of old localStorage data into Supabase |
 | `js/hash.js` | Small helper for parsing the `#/a/b/c` hash route into segments |
-| `js/taskDisplay.js` | Shared pure display helpers (category lookup, due-date status) used by both Board and Today |
+| `js/taskDisplay.js` | Shared pure display helpers (category lookup, due-date status, the ↻ repeat badge) used by both Board and Today |
+| `js/quickAdd.js` | Quick add parsing (dates, `!high`, `#category`, `*`, `~repeat`, `+list`, `book:`); a copy of Magnus's `src/lib/quickadd.js` — keep the two identical |
+| `js/repeat.js` | Repeat rules: `~tokens` → rules, the next due date (mirrors the database's `next_due`), rules in words; a copy of Magnus's `src/lib/repeat.js` — keep the two identical |
 | `js/toast.js` | Toast notifications (success/error/info) and the non-blocking delete-confirmation toast |
 | `js/search.js` | Global search modal: builds a search index, renders grouped results, keyboard navigation; also the command palette and a list picker (`openPicker`) |
 | `js/voiceInput.js` | Wires mic buttons to the Web Speech API for dictating into notes/quote fields |
-| `js/data/*.js` | CRUD calls to Supabase for tasks, categories, routines, completions, projects, project tasks, books, quotes, and the global search index |
+| `js/data/*.js` | CRUD calls to Supabase for tasks, categories, routines, completions, projects, project tasks, books, quotes, and the global search index; `tasks.js` also takes back a repeating task's next copy when it leaves Done (`reopenTask`), and `assistant.js` reads and sets "Done for today" |
 | `js/data/paging.js` | `fetchAll`: reads a table page by page, since Supabase returns at most 1,000 rows per request (tasks, books, quotes, routine check-offs); a copy of Magnus's `src/lib/data/paging.js` |
-| `js/views/today.js` | Today dashboard: starred tasks, routines widget, quote widget |
-| `js/views/board.js` | Board rendering (desktop columns / mobile list), task and category modals, drag-and-drop |
+| `js/views/today.js` | Today dashboard: starred tasks, routines widget, quote widget, Done for today |
+| `js/views/board.js` | Board rendering (desktop columns / mobile list), task and category modals (with the Repeat field), drag-and-drop |
 | `js/views/routines.js` | Routines checklist rendering, streaks, drag-and-drop |
 | `js/views/projects.js` | Projects list and detail panel, checklist items |
 | `js/views/lists.js` | Lists: the lists and the open list side by side (one at a time on phones), items, Clear checked |
 | `js/views/library.js` | Books list/detail, highlights, the standalone quotes tab, and the quote editor (phone sheet, Check against page) |
 | `js/quoteCheck.js` | Check against page: compares a dictated quote with scanned page text word by word and applies the page's version (pure, no DOM) |
 | `test/` | Unit tests for the pure modules (`npm test`, Node's built-in test runner; no install needed) |
-| `supabase/schema*.sql` | Database schema + Row Level Security policies (run in order) |
+| `supabase/schema*.sql` | Database schema + Row Level Security policies (run in order); `schema_007.sql` notifications (pg_cron + pg_net → ntfy.sh), `schema_008.sql` repeating tasks (`next_due` and the `tasks_repeat` trigger) |
 | `scripts/generate-icon.py` | Regenerates `build/icon.png` / `build/icon.icns` from a Pillow-drawn design |
 | `build/icon.icns`, `build/icon.png` | App icon, reused as the favicon / home-screen icon |
 

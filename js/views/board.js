@@ -1,6 +1,7 @@
 import * as tasksApi from '../data/tasks.js';
 import * as categoriesApi from '../data/categories.js';
-import { getCategory as getCategoryFrom, dueStatus, formatDue } from '../taskDisplay.js';
+import { getCategory as getCategoryFrom, dueStatus, formatDue, repeatBadge } from '../taskDisplay.js';
+import { describeRepeat, parseRepeatToken, ruleToToken, firstDue } from '../repeat.js';
 import { showError, showToast } from '../toast.js';
 import { stopVoiceInput } from '../voiceInput.js';
 import { deleteWithUndo } from '../undo.js';
@@ -47,6 +48,8 @@ function cacheElements() {
     taskTitle: document.getElementById('task-title'),
     taskCategory: document.getElementById('task-category'),
     taskDue: document.getElementById('task-due'),
+    taskRepeat: document.getElementById('task-repeat'),
+    taskRepeatHint: document.getElementById('task-repeat-hint'),
     taskStatus: document.getElementById('task-status'),
     taskPriority: document.getElementById('task-priority'),
     taskNotes: document.getElementById('task-notes'),
@@ -215,6 +218,9 @@ function renderCard(task) {
     meta.appendChild(badge);
   }
 
+  const repeat = repeatBadge(task, describeRepeat);
+  if (repeat) meta.appendChild(repeat);
+
   card.appendChild(meta);
 
   card.addEventListener('click', () => openTaskModal(task.id));
@@ -250,6 +256,8 @@ export function openTaskModal(taskId, defaultColumn) {
     el.taskTitle.value = task.title;
     el.taskCategory.value = task.category_id || '';
     el.taskDue.value = task.due_date || '';
+    el.taskRepeat.value = ruleToToken(task.repeat);
+    renderRepeatHint();
     el.taskStatus.value = task.status;
     el.taskPriority.value = task.priority || 'medium';
     el.taskNotes.value = task.notes || '';
@@ -258,6 +266,8 @@ export function openTaskModal(taskId, defaultColumn) {
   } else {
     el.taskModalTitle.textContent = 'New Task';
     el.taskForm.reset();
+    el.taskRepeat.value = '';
+    renderRepeatHint();
     el.taskId.value = '';
     el.taskStatus.value = defaultColumn || 'todo';
     el.taskPriority.value = 'medium';
@@ -298,10 +308,38 @@ function closeTaskModal() {
   stopVoiceInput();
 }
 
+function localToday() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// The Repeat field: a ~token (the ~ is optional) → rule; '' = no repeat;
+// undefined = can't read it. ~weekly/~monthly/~yearly anchor on the due date.
+function readRepeat() {
+  const text = el.taskRepeat.value.trim();
+  if (!text) return '';
+  // Unchanged: keep the rule as it was (~yearly would otherwise re-anchor on the due date).
+  const existing = editingTaskId ? tasks.find((t) => t.id === editingTaskId) : null;
+  if (existing?.repeat && text === ruleToToken(existing.repeat)) return existing.repeat;
+  return parseRepeatToken(text.startsWith('~') ? text : `~${text}`, el.taskDue.value || localToday()) || undefined;
+}
+
+function renderRepeatHint() {
+  const rule = readRepeat();
+  el.taskRepeatHint.textContent = rule === '' ? '' : rule ? `Repeats ${describeRepeat(rule)}` : "⚠ Can't read that: try ~weekly, ~1st, ~last, ~mon,thu, ~3d, ~2w";
+  el.taskRepeatHint.classList.toggle('field-hint-warn', rule === undefined);
+}
+
 async function handleTaskSubmit(e) {
   e.preventDefault();
   const title = el.taskTitle.value.trim();
   if (!title) return;
+  const repeat = readRepeat();
+  if (repeat === undefined) {
+    renderRepeatHint();
+    el.taskRepeat.focus();
+    return;
+  }
 
   const fields = {
     title,
@@ -311,6 +349,11 @@ async function handleTaskSubmit(e) {
     priority: el.taskPriority.value,
     notes: el.taskNotes.value.trim() || null,
   };
+  // Only send repeat when there is one or there was one, so this form keeps
+  // working against a database without schema_008.
+  const before = editingTaskId ? tasks.find((t) => t.id === editingTaskId)?.repeat ?? null : null;
+  if (repeat || before) fields.repeat = repeat || null;
+  if (fields.repeat && !fields.due_date) fields.due_date = firstDue(fields.repeat, localToday());
 
   if (editingTaskId) {
     const existing = tasks.find((t) => t.id === editingTaskId);
@@ -321,9 +364,22 @@ async function handleTaskSubmit(e) {
 
   try {
     if (editingTaskId) {
-      const updated = await tasksApi.updateTask(editingTaskId, fields);
+      const existing = tasks.find((t) => t.id === editingTaskId);
+      let updated;
+      if (existing?.status === 'done' && fields.status !== 'done') {
+        // Out of Done: take back a repeating task’s next copy, and give it its rule back.
+        const res = await tasksApi.reopenTask(existing, fields);
+        updated = res.row;
+        if (res.removedId) tasks = tasks.filter((t) => t.id !== res.removedId);
+      } else {
+        updated = await tasksApi.updateTask(editingTaskId, fields);
+      }
       const index = tasks.findIndex((t) => t.id === editingTaskId);
       tasks[index] = updated;
+      if (fields.status === 'done' && existing?.status !== 'done' && existing?.repeat) {
+        const copy = await tasksApi.findSpawnedCopy(updated);
+        if (copy && !tasks.some((t) => t.id === copy.id)) tasks.push(copy);
+      }
     } else {
       const created = await tasksApi.createTask(userId, fields, tasks.length);
       tasks.push(created);
@@ -533,6 +589,7 @@ function wireColumnDrop() {
       const newStatus = container.dataset.column;
       if (task.status === newStatus) return;
       const wasStarred = task.is_starred;
+      const before = { ...task };
       task.status = newStatus;
       const updates = { status: newStatus };
       if (newStatus === 'done' && wasStarred) {
@@ -541,9 +598,26 @@ function wireColumnDrop() {
       }
       renderBoard();
       try {
-        await tasksApi.updateTask(task.id, updates);
+        if (before.status === 'done') {
+          // Out of Done: a repeating task's next copy goes away and its rule comes back.
+          const { row, removedId } = await tasksApi.reopenTask(before, updates);
+          tasks = tasks.filter((t) => t.id !== removedId).map((t) => (t.id === row.id ? row : t));
+        } else {
+          const row = await tasksApi.updateTask(task.id, updates);
+          tasks = tasks.map((t) => (t.id === row.id ? row : t)); // the server's row: a finished repeat has lost its rule
+          if (newStatus === 'done' && before.repeat) {
+            const copy = await tasksApi.findSpawnedCopy(row);
+            if (copy) {
+              if (!tasks.some((t) => t.id === copy.id)) tasks.push(copy);
+              showToast(`Done · the next one is due ${formatDue(copy.due_date)}`, { type: 'success', duration: 3000 });
+            }
+          }
+        }
+        renderBoard();
+        notifyDataChanged('board');
       } catch (err) {
-        if (newStatus === 'done' && wasStarred) task.is_starred = true;
+        Object.assign(task, before);
+        renderBoard();
         showError(err);
       }
     });
@@ -558,6 +632,8 @@ export async function initBoard(uid) {
   wireColumnDrop();
 
   el.taskForm.addEventListener('submit', handleTaskSubmit);
+  el.taskRepeat.addEventListener('input', renderRepeatHint);
+  el.taskDue.addEventListener('change', renderRepeatHint);
   el.taskDeleteBtn.addEventListener('click', handleTaskDelete);
   el.taskFocusBtn.addEventListener('click', handleFocusClick);
   el.taskModalClose.addEventListener('click', closeTaskModal);

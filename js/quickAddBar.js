@@ -130,6 +130,7 @@ async function handleSubmit(e) {
         category_id: parsed.category_id,
         is_starred: isStarred,
         status: 'todo',
+        ...(parsed.repeat ? { repeat: parsed.repeat } : {}),
       },
       tasks.length
     );

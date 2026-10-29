@@ -128,7 +128,7 @@ async function markDone(task) {
   const fields = { status: 'done' };
   if (task.is_starred) fields.is_starred = false;
   try {
-    await tasksApi.updateTask(task.id, fields);
+    const row = await tasksApi.updateTask(task.id, fields);
     tasks = tasks.filter((t) => t.id !== task.id);
     render();
     notifyDataChanged('upcoming');
@@ -136,7 +136,7 @@ async function markDone(task) {
       actionLabel: 'Undo',
       onAction: async () => {
         try {
-          await tasksApi.updateTask(task.id, previous);
+          await tasksApi.reopenTask(row, previous); // a repeating task's next copy goes away too
           notifyDataChanged('undo');
         } catch (err) {
           showError(err);

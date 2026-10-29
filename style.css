@@ -1333,6 +1333,19 @@ input, textarea, select, button {
   border-top: 1px solid var(--border);
 }
 
+.field-hint { display: block; min-height: 1em; margin-top: 4px; font-size: 12px; color: var(--text-muted); }
+.field-hint-warn { color: var(--text); } /* full-contrast text (with a ⚠) rather than --danger, which is only 4.5:1 on Hearth dark's surface */
+.repeat-badge { color: var(--text-muted); font-size: 13px; line-height: 1; }
+
+.today-close {
+  margin-top: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.today-close-note { color: var(--text-muted); font-size: 13px; }
+
 .quote-text {
   font-family: var(--font-serif);
   font-style: italic;

@@ -72,7 +72,7 @@
       <!-- Quick add (every view; on phones the floating + opens it) -->
       <form class="quickadd" id="quickadd-form" autocomplete="off">
         <div class="quickadd-row">
-          <input type="text" id="quickadd-input" placeholder="Quick add: renew passport fri !high #home *" aria-label="Quick add a task" enterkeyhint="done" />
+          <input type="text" id="quickadd-input" placeholder="Quick add: renew passport fri !high #home * (~1st repeats)" aria-label="Quick add a task" enterkeyhint="done" />
           <button type="submit" class="btn btn-primary quickadd-btn" title="Add task (shortcut: a)" aria-label="Add task">+</button>
         </div>
         <div class="quickadd-preview" id="quickadd-preview" aria-live="polite" hidden></div>
@@ -98,6 +98,8 @@
             <div class="card-list" id="today-starred-list"></div>
 
             <div class="quote-widget" id="today-quote"></div>
+
+            <div class="today-close" id="today-close" hidden></div>
           </div>
 
           <aside class="today-side" id="today-routines-widget">
@@ -724,6 +726,12 @@
             <input type="date" id="task-due" />
           </label>
         </div>
+
+        <label class="field">
+          <span>Repeat</span>
+          <input type="text" id="task-repeat" placeholder="~weekly, ~1st, ~mon,thu, ~3d (blank: doesn't repeat)" autocomplete="off" autocapitalize="off" spellcheck="false" />
+          <small class="field-hint" id="task-repeat-hint"></small>
+        </label>
 
         <div class="field-row">
           <label class="field">

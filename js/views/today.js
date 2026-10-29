@@ -5,9 +5,12 @@ import * as completionsApi from '../data/completions.js';
 import * as quotesApi from '../data/quotes.js';
 import * as booksApi from '../data/books.js';
 import { loadGoals } from '../data/lists.js';
-import { getCategory as getCategoryFrom, dueStatus, formatDue } from '../taskDisplay.js';
+import { getCategory as getCategoryFrom, dueStatus, formatDue, repeatBadge } from '../taskDisplay.js';
+import { describeRepeat } from '../repeat.js';
 import { showError } from '../toast.js';
 import { renderYesterdayChip, yesterdayISO } from '../yesterdayChip.js';
+import * as assistantApi from '../data/assistant.js';
+import { isMissingSchema } from '../schema.js';
 
 const TIME_OF_DAY_LABELS = { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening' };
 
@@ -18,6 +21,11 @@ let completions = new Map();
 let quote = null;
 let books = [];
 let goals = [];
+let userId = null;
+let dayClosed = null; // null = unknown or no schema_007: the control stays hidden
+
+// "Done for today" shows from this hour on (local time).
+const CLOSE_FROM_HOUR = 17;
 
 const el = {};
 
@@ -28,6 +36,7 @@ function cacheElements() {
     quote: document.getElementById('today-quote'),
     routinesWidget: document.getElementById('today-routines-widget'),
     goals: document.getElementById('today-goals'),
+    close: document.getElementById('today-close'),
   });
 }
 
@@ -58,6 +67,41 @@ function renderGoals() {
   }
   link.appendChild(ul);
   el.goals.appendChild(link);
+}
+
+// Evenings: close the day without journaling, so the 10 pm "Close the day?"
+// push doesn't come. After closing it reads "Day closed · undo".
+function renderClose() {
+  if (!el.close) return;
+  el.close.replaceChildren();
+  el.close.hidden = dayClosed === null || new Date().getHours() < CLOSE_FROM_HOUR;
+  if (el.close.hidden) return;
+  const day = completionsApi.todayISO();
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'btn btn-ghost';
+  if (dayClosed) {
+    const note = document.createElement('span');
+    note.className = 'today-close-note';
+    note.textContent = 'Day closed';
+    el.close.appendChild(note);
+    button.textContent = 'Undo';
+    button.setAttribute('aria-label', 'Undo: reopen today');
+  } else {
+    button.textContent = 'Done for today';
+    button.title = 'Close the day: no "Close the day?" notification tonight';
+  }
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    try {
+      await assistantApi.setDayClosed(userId, day, !dayClosed);
+      dayClosed = !dayClosed;
+    } catch (err) {
+      showError(err);
+    }
+    renderClose();
+  });
+  el.close.appendChild(button);
 }
 
 function renderDate() {
@@ -112,6 +156,9 @@ function renderStarred() {
       badge.textContent = (status === 'overdue' ? 'Overdue · ' : '') + formatDue(task.due_date);
       meta.appendChild(badge);
     }
+
+    const repeat = repeatBadge(task, describeRepeat);
+    if (repeat) meta.appendChild(repeat);
 
     card.appendChild(meta);
     el.starredList.appendChild(card);
@@ -227,7 +274,8 @@ function renderQuote() {
   }
 }
 
-export async function initToday() {
+export async function initToday(uid) {
+  userId = uid;
   cacheElements();
   renderDate();
   await refreshToday();
@@ -250,8 +298,11 @@ export async function refreshToday() {
     showError(err);
     return;
   }
+  // Before schema_007 (or offline) the close control just stays hidden.
+  dayClosed = await assistantApi.isDayClosed(completionsApi.todayISO()).catch((err) => (isMissingSchema(err) ? null : dayClosed));
   renderGoals();
   renderStarred();
   renderRoutinesWidget();
   renderQuote();
+  renderClose();
 }

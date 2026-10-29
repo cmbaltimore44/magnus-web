@@ -20,3 +20,15 @@ export function formatDue(dateStr) {
   const due = new Date(dateStr + 'T00:00:00');
   return due.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
+
+// "↻" after a repeating task's due date (schema_008), with the rule in words
+// for screen readers and as a tooltip.
+export function repeatBadge(task, describe) {
+  if (!task.repeat) return null;
+  const span = document.createElement('span');
+  span.className = 'repeat-badge';
+  span.textContent = '↻';
+  span.title = `Repeats ${describe(task.repeat)}`;
+  span.setAttribute('aria-label', span.title);
+  return span;
+}

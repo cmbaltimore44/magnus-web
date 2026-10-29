@@ -1,5 +1,6 @@
 // Copy of Magnus's src/lib/quickadd.js — keep the two in sync.
 import { parseDateInput } from './dates.js';
+import { parseRepeatToken, firstDue, describeRepeat } from './repeat.js';
 
 // Quick add: one line → a new task.
 //   "renew passport fri !high #home *"
@@ -7,6 +8,9 @@ import { parseDateInput } from './dates.js';
 //     !high      priority (!h / !m / !l also work)
 //     #home      category whose name starts with "home" (case-insensitive)
 //     *          starred
+//     ~1st       repeats (schema_008): ~daily ~weekdays ~weekly ~mon,thu ~monthly
+//                ~15th ~last ~yearly ~3d ~2w ~6m — see lib/repeat.js. Without a
+//                date, the first due date is the first matching day from today.
 //   "> some thought" goes to the journal inbox instead (Magnus only).
 //   "book: Piranesi by Susanna Clarke" (or "b: …") adds a Want to Read book;
 //   "book: 978-0141439549" adds one by ISBN (looked up on Open Library).
@@ -30,7 +34,13 @@ export function parseQuickAdd(text, categories = [], now = new Date()) {
   if (toList) return { list: toList[1], text: toList[2].trim() };
   const out = { title: '', due_date: null, priority: 'medium', category_id: null, is_starred: false };
   const words = [];
+  const todayISO = parseDateInput('today', now);
+  let repeatWord = null;
   for (const word of raw.split(/\s+/).filter(Boolean)) {
+    if (!repeatWord && word.startsWith('~') && parseRepeatToken(word, todayISO)) {
+      repeatWord = word; // resolved below, once the due date is known
+      continue;
+    }
     if (word === '*') {
       out.is_starred = true;
       continue;
@@ -62,6 +72,10 @@ export function parseQuickAdd(text, categories = [], now = new Date()) {
     words.push(word);
   }
   out.title = words.join(' ');
+  if (repeatWord) {
+    out.repeat = parseRepeatToken(repeatWord, out.due_date || todayISO);
+    if (!out.due_date) out.due_date = firstDue(out.repeat, todayISO);
+  }
   return out;
 }
 
@@ -103,5 +117,6 @@ export function describeQuickAdd(parsed, categories = [], lists = []) {
   const cat = categories.find((c) => c.id === parsed.category_id);
   if (cat) bits.push(cat.name);
   if (parsed.is_starred) bits.push('starred');
+  if (parsed.repeat) bits.push(`↻ ${describeRepeat(parsed.repeat)}`);
   return bits.join(' · ');
 }
